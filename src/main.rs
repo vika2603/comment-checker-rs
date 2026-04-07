@@ -1,5 +1,4 @@
 mod cli;
-mod error;
 
 use clap::Parser;
 use std::process::ExitCode;
