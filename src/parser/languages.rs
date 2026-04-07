@@ -41,22 +41,6 @@ impl Language {
             .and_then(Self::from_extension)
     }
 
-    pub fn tree_sitter_language(&self) -> tree_sitter::Language {
-        match self {
-            Language::Rust => tree_sitter_rust::LANGUAGE.into(),
-            Language::Python => tree_sitter_python::LANGUAGE.into(),
-            Language::JavaScript | Language::Jsx => tree_sitter_javascript::LANGUAGE.into(),
-            Language::TypeScript => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
-            Language::Tsx => tree_sitter_typescript::LANGUAGE_TSX.into(),
-            Language::Go => tree_sitter_go::LANGUAGE.into(),
-            Language::Java => tree_sitter_java::LANGUAGE.into(),
-            Language::C => tree_sitter_c::LANGUAGE.into(),
-            Language::Cpp => tree_sitter_cpp::LANGUAGE.into(),
-            Language::Ruby => tree_sitter_ruby::LANGUAGE.into(),
-            Language::Shell => tree_sitter_bash::LANGUAGE.into(),
-        }
-    }
-
     pub fn name(&self) -> &'static str {
         match self {
             Language::Rust => "rust",
@@ -72,5 +56,65 @@ impl Language {
             Language::Ruby => "ruby",
             Language::Shell => "shell",
         }
+    }
+
+    /// The .so file name to look for (e.g. "rust.so").
+    /// JSX reuses javascript.so. All others match their grammar name.
+    pub fn so_file_name(&self) -> &'static str {
+        match self {
+            Language::Rust => "rust.so",
+            Language::Python => "python.so",
+            Language::JavaScript | Language::Jsx => "javascript.so",
+            Language::TypeScript => "typescript.so",
+            Language::Tsx => "tsx.so",
+            Language::Go => "go.so",
+            Language::Java => "java.so",
+            Language::C => "c.so",
+            Language::Cpp => "cpp.so",
+            Language::Ruby => "ruby.so",
+            Language::Shell => "bash.so",
+        }
+    }
+
+    /// The C symbol exported by the grammar .so (e.g. "tree_sitter_rust").
+    pub fn symbol_name(&self) -> &'static [u8] {
+        match self {
+            Language::Rust => b"tree_sitter_rust",
+            Language::Python => b"tree_sitter_python",
+            Language::JavaScript | Language::Jsx => b"tree_sitter_javascript",
+            Language::TypeScript => b"tree_sitter_typescript",
+            Language::Tsx => b"tree_sitter_tsx",
+            Language::Go => b"tree_sitter_go",
+            Language::Java => b"tree_sitter_java",
+            Language::C => b"tree_sitter_c",
+            Language::Cpp => b"tree_sitter_cpp",
+            Language::Ruby => b"tree_sitter_ruby",
+            Language::Shell => b"tree_sitter_bash",
+        }
+    }
+
+    /// The grammar name used in download URLs (e.g. "rust", "bash").
+    pub fn grammar_name(&self) -> &'static str {
+        match self {
+            Language::Rust => "rust",
+            Language::Python => "python",
+            Language::JavaScript | Language::Jsx => "javascript",
+            Language::TypeScript => "typescript",
+            Language::Tsx => "tsx",
+            Language::Go => "go",
+            Language::Java => "java",
+            Language::C => "c",
+            Language::Cpp => "cpp",
+            Language::Ruby => "ruby",
+            Language::Shell => "bash",
+        }
+    }
+
+    /// All distinct grammar names (for fetch-parsers --all).
+    pub fn all_grammar_names() -> &'static [&'static str] {
+        &[
+            "rust", "python", "javascript", "typescript", "tsx",
+            "go", "java", "c", "cpp", "ruby", "bash",
+        ]
     }
 }

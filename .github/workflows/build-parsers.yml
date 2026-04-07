@@ -1,0 +1,68 @@
+name: Build Tree-Sitter Parsers
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Parser release version (e.g. parsers-v1)'
+        required: true
+        default: 'parsers-v1'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            arch: arm64
+            suffix: darwin-arm64
+          - os: macos-13
+            arch: x86_64
+            suffix: darwin-x86_64
+          - os: ubuntu-latest
+            arch: x86_64
+            suffix: linux-x86_64
+          - os: ubuntu-24.04-arm
+            arch: aarch64
+            suffix: linux-aarch64
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build grammar .so files
+        run: |
+          chmod +x scripts/build-parsers.sh
+          ./scripts/build-parsers.sh ${{ matrix.suffix }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: parsers-${{ matrix.suffix }}
+          path: build/parsers/*.so
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-parsers
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: |
+          cd all-parsers
+          sha256sum *.so > checksums.sha256
+          cat checksums.sha256
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          files: |
+            all-parsers/*.so
+            all-parsers/checksums.sha256

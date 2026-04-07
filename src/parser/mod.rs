@@ -7,11 +7,13 @@ use tree_sitter::Node;
 
 /// Parse all comments from `source` for the given language.
 /// Returns `None` if the source cannot be parsed.
-pub fn parse_comments(source: &str, lang: Language) -> Option<Vec<Comment>> {
+pub fn parse_comments(
+    source: &str,
+    lang: Language,
+    ts_language: &tree_sitter::Language,
+) -> Option<Vec<Comment>> {
     let mut parser = tree_sitter::Parser::new();
-    parser
-        .set_language(&lang.tree_sitter_language())
-        .ok()?;
+    parser.set_language(ts_language).ok()?;
 
     let tree = parser.parse(source, None)?;
     let root = tree.root_node();
