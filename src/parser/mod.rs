@@ -56,7 +56,7 @@ fn walk_for_comments<'a>(
 /// Returns true if `node` is a Python docstring: a string-literal
 /// `expression_statement` that is the first non-comment statement in a
 /// module, class body, or function body.
-fn is_python_docstring(node: Node<'_>, source: &str) -> bool {
+fn is_python_docstring(node: Node<'_>, _source: &str) -> bool {
     if node.kind() != "expression_statement" {
         return false;
     }
@@ -80,9 +80,7 @@ fn is_python_docstring(node: Node<'_>, source: &str) -> bool {
         }
     }
 
-    // Fallback: accept any triple-quoted string
-    let text = node_text(node, source);
-    text.starts_with("\"\"\"") || text.starts_with("'''")
+    false
 }
 
 fn extract_python_docstring(node: Node<'_>, source: &str) -> Option<Comment> {
@@ -110,14 +108,9 @@ fn classify_comment(raw: &str, type_name: &str) -> CommentKind {
     }
 
     if type_name.contains("block")
-        || type_name == "comment" && trimmed.starts_with("/*")
+        || (type_name == "comment" && trimmed.starts_with("/*"))
     {
         return CommentKind::Block;
-    }
-
-    // Python triple-quoted strings not caught by the expression_statement path
-    if trimmed.starts_with("\"\"\"") || trimmed.starts_with("'''") {
-        return CommentKind::Doc;
     }
 
     CommentKind::Line
@@ -126,7 +119,7 @@ fn classify_comment(raw: &str, type_name: &str) -> CommentKind {
 fn node_text<'a>(node: Node<'_>, source: &'a str) -> &'a str {
     let start = node.start_byte();
     let end = node.end_byte();
-    &source[start..end]
+    source.get(start..end).unwrap_or("")
 }
 
 fn node_to_span(node: Node<'_>) -> Span {

@@ -98,16 +98,19 @@ pub fn find_changed_ranges(
     let mut ranges: Vec<Range<usize>> = Vec::new();
 
     for needle in new_strings {
-        if let Some(byte_pos) = file_content.find(needle) {
+        let needle_line_count = needle.as_bytes().iter().filter(|&&b| b == b'\n').count().max(1);
+        let mut offset = 0;
+        while let Some(rel_pos) = file_content[offset..].find(needle) {
+            let byte_pos = offset + rel_pos;
             let before = &file_content[..byte_pos];
-            let start_line = before.lines().count() + 1;
-            let needle_lines = needle.lines().count().max(1);
-            let end_line = start_line + needle_lines - 1;
+            let start_line = before.as_bytes().iter().filter(|&&b| b == b'\n').count() + 1;
+            let end_line = start_line + needle_line_count - 1;
 
             let buffered_start = start_line.saturating_sub(LINE_BUFFER).max(1);
             let buffered_end = (end_line + LINE_BUFFER + 1).min(total_lines + 1);
 
             ranges.push(buffered_start..buffered_end);
+            offset = byte_pos + needle.len().max(1);
         }
     }
 

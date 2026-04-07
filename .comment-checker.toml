@@ -12,4 +12,9 @@ allowlist = [
   "merged$",
   "^Both ranges",
   "^Write tool",
+
+  # Accurate doc comment for is_python_docstring function
+  "Returns true if `node` is a Python docstring",
+  "`expression_statement` that is the first non-comment statement",
+  "module, class body, or function body",
 ]

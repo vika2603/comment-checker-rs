@@ -13,7 +13,7 @@ const HOOK_ENTRY: &str = r#"{
       }"#;
 
 pub fn init(target: &Target) -> Result<(), String> {
-    let path = settings_path(target);
+    let path = settings_path(target)?;
     let display = path.display().to_string();
 
     let mut root = read_or_create(&path)?;
@@ -49,7 +49,7 @@ pub fn init(target: &Target) -> Result<(), String> {
 }
 
 pub fn uninstall(target: &Target) -> Result<(), String> {
-    let path = settings_path(target);
+    let path = settings_path(target)?;
     let display = path.display().to_string();
 
     if !path.exists() {
@@ -85,12 +85,12 @@ pub fn uninstall(target: &Target) -> Result<(), String> {
     Ok(())
 }
 
-fn settings_path(target: &Target) -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-    match target {
+fn settings_path(target: &Target) -> Result<PathBuf, String> {
+    let home = std::env::var("HOME").map_err(|_| "HOME environment variable not set".to_string())?;
+    Ok(match target {
         Target::Claude => PathBuf::from(&home).join(".claude").join("settings.json"),
         Target::Codex => PathBuf::from(&home).join(".codex").join("hooks.json"),
-    }
+    })
 }
 
 fn read_or_create(path: &PathBuf) -> Result<serde_json::Value, String> {

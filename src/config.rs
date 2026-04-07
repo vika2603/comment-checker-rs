@@ -33,10 +33,11 @@ pub fn load_config(explicit_path: Option<&Path>, start_dir: &Path) -> Result<Con
         }
     }
 
-    let xdg_config = xdg_config_dir();
-    let xdg_candidate = xdg_config.join("comment-checker").join("config.toml");
-    if xdg_candidate.exists() {
-        return read_config(&xdg_candidate);
+    if let Some(xdg_config) = xdg_config_dir() {
+        let xdg_candidate = xdg_config.join("comment-checker").join("config.toml");
+        if xdg_candidate.exists() {
+            return read_config(&xdg_candidate);
+        }
     }
 
     Ok(Config::default())
@@ -50,16 +51,10 @@ fn read_config(path: &Path) -> Result<Config> {
     })
 }
 
-fn xdg_config_dir() -> PathBuf {
+fn xdg_config_dir() -> Option<PathBuf> {
     if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
-        PathBuf::from(xdg)
+        Some(PathBuf::from(xdg))
     } else {
-        dirs_home().join(".config")
+        std::env::var("HOME").ok().map(|h| PathBuf::from(h).join(".config"))
     }
-}
-
-fn dirs_home() -> PathBuf {
-    std::env::var("HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from("."))
 }
