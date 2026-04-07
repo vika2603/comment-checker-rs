@@ -144,6 +144,10 @@ cp target/release/comment-checker /usr/local/bin/
 
 Requires a C compiler for tree-sitter grammar compilation. First build takes ~1 minute.
 
+## Acknowledgments
+
+Inspired by [go-claude-code-comment-checker](https://github.com/code-yeongyu/go-claude-code-comment-checker) by [@code-yeongyu](https://github.com/code-yeongyu). This project takes the same core idea (flag all comments, let the AI agent decide) and reimplements it in Rust with tree-sitter AST parsing, multi-language support, changed-region filtering, and configurable allowlists.
+
 ## License
 
 MIT
