@@ -7,8 +7,6 @@ use crate::error::{Error, Result};
 pub struct ParserConfig {
     pub path: Option<PathBuf>,
     #[serde(default = "default_true")]
-    pub use_nvim_parsers: bool,
-    #[serde(default = "default_true")]
     pub auto_download: bool,
 }
 
@@ -20,7 +18,6 @@ impl Default for ParserConfig {
     fn default() -> Self {
         Self {
             path: None,
-            use_nvim_parsers: true,
             auto_download: true,
         }
     }

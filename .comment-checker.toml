@@ -23,7 +23,7 @@ allowlist = [
   "which invalidates the function pointers",
 
   # snapshot_test.rs helper doc comment
-  "^Returns None when the nvim parser",
+  "^Returns None when the parser",
   "allowing the caller to skip the test gracefully",
 
   # Test assertion labels (parser_test.rs)

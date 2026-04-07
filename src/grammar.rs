@@ -83,12 +83,6 @@ impl GrammarCache {
             dirs.push(path.clone());
         }
 
-        if parser_config.use_nvim_parsers {
-            if let Some(data_dir) = xdg_data_dir() {
-                dirs.push(data_dir.join("nvim/site/parser"));
-            }
-        }
-
         if let Some(cache) = grammar_cache_dir() {
             dirs.push(cache);
         }
@@ -222,14 +216,6 @@ pub fn download_grammar(
     Ok(final_path)
 }
 
-fn xdg_data_dir() -> Option<PathBuf> {
-    if let Ok(xdg) = std::env::var("XDG_DATA_HOME") {
-        Some(PathBuf::from(xdg))
-    } else {
-        std::env::var("HOME").ok().map(|h| PathBuf::from(h).join(".local/share"))
-    }
-}
-
 pub fn grammar_cache_dir() -> Option<PathBuf> {
     let base = if let Ok(xdg) = std::env::var("XDG_CACHE_HOME") {
         PathBuf::from(xdg)
@@ -245,16 +231,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_load_from_nvim_if_available() {
-        let nvim_parser_dir = std::env::var("HOME")
-            .map(|h| PathBuf::from(h).join(".local/share/nvim/site/parser"))
-            .unwrap_or_else(|_| PathBuf::from("/nonexistent"));
-        if !nvim_parser_dir.join("rust.so").exists() {
-            eprintln!("skipping test: nvim rust parser not found");
+    fn test_load_from_cache_if_available() {
+        let cache_dir = grammar_cache_dir().unwrap_or_else(|| PathBuf::from("/nonexistent"));
+        if !cache_dir.join("rust.so").exists() {
+            eprintln!("skipping test: cached rust parser not found");
             return;
         }
         let mut cache = GrammarCache::new();
-        let result = cache.get(Language::Rust, &[nvim_parser_dir]);
+        let result = cache.get(Language::Rust, &[cache_dir]);
         assert!(result.is_ok(), "failed to load rust grammar: {:?}", result);
 
         let lang = result.unwrap();
@@ -266,14 +250,12 @@ mod tests {
 
     #[test]
     fn test_cache_returns_same_language() {
-        let nvim_parser_dir = std::env::var("HOME")
-            .map(|h| PathBuf::from(h).join(".local/share/nvim/site/parser"))
-            .unwrap_or_else(|_| PathBuf::from("/nonexistent"));
-        if !nvim_parser_dir.join("rust.so").exists() {
+        let cache_dir = grammar_cache_dir().unwrap_or_else(|| PathBuf::from("/nonexistent"));
+        if !cache_dir.join("rust.so").exists() {
             return;
         }
         let mut cache = GrammarCache::new();
-        let dirs = vec![nvim_parser_dir];
+        let dirs = vec![cache_dir];
         let lang1 = cache.get(Language::Rust, &dirs).unwrap();
         let lang2 = cache.get(Language::Rust, &dirs).unwrap();
         assert_eq!(lang1.node_kind_count(), lang2.node_kind_count());
@@ -304,7 +286,6 @@ mod tests {
     fn test_build_search_dirs_custom_path() {
         let config = crate::config::ParserConfig {
             path: Some(PathBuf::from("/custom/parsers")),
-            use_nvim_parsers: false,
             auto_download: false,
         };
         let dirs = GrammarCache::build_search_dirs(&config);

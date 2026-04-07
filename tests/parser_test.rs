@@ -4,18 +4,14 @@ use comment_checker::allowlist::Allowlist;
 const RUST_FIXTURE: &str = include_str!("fixtures/rust.rs");
 
 fn load_ts_language(lang: Language) -> Option<tree_sitter::Language> {
-    let nvim_dir = std::env::var("HOME").ok()
-        .map(|h| std::path::PathBuf::from(h).join(".local/share/nvim/site/parser"))?;
-    // Leak the cache so the Library (and its symbols) are never dropped.
-    // Multiple tests run in the same process; dropping Library triggers dlclose
-    // which invalidates the function pointers held by tree_sitter::Language.
+    let cache_dir = comment_checker::grammar::grammar_cache_dir()?;
     let cache = Box::leak(Box::new(comment_checker::grammar::GrammarCache::new()));
-    cache.get(lang, &[nvim_dir]).ok()
+    cache.get(lang, &[cache_dir]).ok()
 }
 
 #[test]
 fn test_parse_rust_fixture_finds_comments() {
-    let ts_lang = load_ts_language(Language::Rust).expect("nvim rust parser required for tests");
+    let ts_lang = load_ts_language(Language::Rust).expect("rust parser required for tests");
     let comments = parse_comments(RUST_FIXTURE, Language::Rust, &ts_lang)
         .expect("parse should succeed for valid Rust");
 
@@ -29,7 +25,7 @@ fn test_parse_rust_fixture_finds_comments() {
 
 #[test]
 fn test_parse_rust_fixture_no_false_positives() {
-    let ts_lang = load_ts_language(Language::Rust).expect("nvim rust parser required for tests");
+    let ts_lang = load_ts_language(Language::Rust).expect("rust parser required for tests");
     let comments = parse_comments(RUST_FIXTURE, Language::Rust, &ts_lang)
         .expect("parse should succeed");
 
@@ -50,7 +46,7 @@ fn test_parse_rust_fixture_no_false_positives() {
 
 #[test]
 fn test_parse_rust_fixture_comment_kinds() {
-    let ts_lang = load_ts_language(Language::Rust).expect("nvim rust parser required for tests");
+    let ts_lang = load_ts_language(Language::Rust).expect("rust parser required for tests");
     let comments = parse_comments(RUST_FIXTURE, Language::Rust, &ts_lang)
         .expect("parse should succeed");
 
@@ -65,7 +61,7 @@ fn test_parse_rust_fixture_comment_kinds() {
 
 #[test]
 fn test_allowlist_against_rust_fixture() {
-    let ts_lang = load_ts_language(Language::Rust).expect("nvim rust parser required for tests");
+    let ts_lang = load_ts_language(Language::Rust).expect("rust parser required for tests");
     let comments = parse_comments(RUST_FIXTURE, Language::Rust, &ts_lang)
         .expect("parse should succeed");
 
