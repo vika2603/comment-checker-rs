@@ -109,7 +109,7 @@ fn hook_json_write(file_path: &str) -> String {
 }
 
 #[test]
-fn test_hook_write_tool_exits_1_with_prompt_output() {
+fn test_hook_write_tool_exits_0_with_prompt_output() {
     let path = fixture_str("rust.rs");
     let json = hook_json_write(&path);
 
@@ -117,8 +117,8 @@ fn test_hook_write_tool_exits_1_with_prompt_output() {
         .arg("--hook")
         .write_stdin(json)
         .assert()
-        .code(1)
-        .stderr(predicate::str::contains("<comment-checker>"));
+        .code(0)
+        .stdout(predicate::str::contains("<comment-checker>"));
 }
 
 #[test]
@@ -158,7 +158,7 @@ fn test_hook_empty_stdin_exits_0() {
 }
 
 #[test]
-fn test_hook_with_python_fixture_exits_1() {
+fn test_hook_with_python_fixture_exits_0_with_output() {
     let path = fixture_str("python.py");
     let json = hook_json_write(&path);
 
@@ -166,12 +166,12 @@ fn test_hook_with_python_fixture_exits_1() {
         .arg("--hook")
         .write_stdin(json)
         .assert()
-        .code(1)
-        .stderr(predicate::str::contains("<comment-checker>"));
+        .code(0)
+        .stdout(predicate::str::contains("<comment-checker>"));
 }
 
 #[test]
-fn test_hook_quiet_exits_1_empty_stdout() {
+fn test_hook_quiet_exits_0_empty_stdout() {
     let path = fixture_str("rust.rs");
     let json = hook_json_write(&path);
 
@@ -180,7 +180,7 @@ fn test_hook_quiet_exits_1_empty_stdout() {
         .arg("--quiet")
         .write_stdin(json)
         .assert()
-        .code(1)
+        .code(0)
         .stdout(predicate::str::is_empty());
 }
 
@@ -292,6 +292,6 @@ fn test_hook_edit_tool_filters_by_range() {
         .arg("--hook")
         .write_stdin(json)
         .assert()
-        .code(1)
-        .stderr(predicate::str::contains("<comment-checker>"));
+        .code(0)
+        .stdout(predicate::str::contains("<comment-checker>"));
 }

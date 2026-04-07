@@ -26,15 +26,8 @@ fn main() -> ExitCode {
     }
 
     if args.hook {
-        // Errors in hook mode must not block the agent — always exit 0 on error
         match run(&args) {
-            Ok(has_diagnostics) => {
-                if has_diagnostics {
-                    ExitCode::FAILURE
-                } else {
-                    ExitCode::SUCCESS
-                }
-            }
+            Ok(_) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("comment-checker hook error: {e}");
                 ExitCode::SUCCESS
@@ -88,11 +81,7 @@ fn run(args: &Cli) -> Result<bool> {
             }
         };
         if !output.is_empty() {
-            if args.hook {
-                eprint!("{output}");
-            } else {
-                print!("{output}");
-            }
+            print!("{output}");
         }
     }
 
