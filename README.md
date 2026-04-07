@@ -9,15 +9,18 @@ All comments are suspect. The tool flags every comment unless it matches an allo
 ## Quick Start
 
 ```bash
-# Build from source
+# One-line install + hook setup for Claude Code
+curl -fsSL https://raw.githubusercontent.com/vika2603/comment-checker-rs/main/install.sh | sh -s -- --claude
+
+# Or for Codex
+curl -fsSL https://raw.githubusercontent.com/vika2603/comment-checker-rs/main/install.sh | sh -s -- --codex
+
+# Install only (no hook setup)
+curl -fsSL https://raw.githubusercontent.com/vika2603/comment-checker-rs/main/install.sh | sh
+
+# Or build from source
 cargo install --path .
-
-# Install hook for your AI coding tool
 comment-checker init claude
-comment-checker init codex
-
-# Or check files directly
-comment-checker src/
 ```
 
 ## How It Works
@@ -142,7 +145,7 @@ cargo build --release
 cp target/release/comment-checker /usr/local/bin/
 ```
 
-Requires a C compiler for tree-sitter grammar compilation. First build takes ~1 minute.
+Tree-sitter grammars are loaded dynamically at runtime (not compiled into the binary). On first use, the required grammar `.so` file is automatically downloaded from GitHub releases and cached in `~/.cache/comment-checker/parsers/`. No C compiler required for building.
 
 ## Acknowledgments
 
