@@ -63,4 +63,7 @@ allowlist = [
   "atomic write.*tmp.*verify.*rename",
   "^Verify SHA256",
   "^Atomic write.*tmp.*rename",
+
+  # Linter directives in shell scripts
+  "^shellcheck",
 ]

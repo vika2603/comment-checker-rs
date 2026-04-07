@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SUFFIX="${1:?Usage: build-parsers.sh <platform-suffix>}"
+SUFFIX="${1:?Usage: build-parsers.sh <platform-suffix> [cc-flags]}"
+CC_FLAGS="${2:-}"
 OUTDIR="build/parsers"
 mkdir -p "$OUTDIR"
 
@@ -19,7 +20,6 @@ ruby       tree-sitter/tree-sitter-ruby       v0.23.1
 bash       tree-sitter/tree-sitter-bash       v0.25.1
 "
 
-count=0
 echo "$GRAMMARS" | while read -r lang repo tag subdir; do
   [ -z "$lang" ] && continue
   subdir="${subdir:-src}"
@@ -34,7 +34,8 @@ echo "$GRAMMARS" | while read -r lang repo tag subdir; do
   sources="$srcdir/parser.c"
   [ -f "$srcdir/scanner.c" ] && sources="$sources $srcdir/scanner.c"
 
-  cc -shared -fPIC -O2 \
+  # shellcheck disable=SC2086
+  cc -shared -fPIC -O2 $CC_FLAGS \
     -I "$srcdir" \
     $sources \
     -o "$outfile"

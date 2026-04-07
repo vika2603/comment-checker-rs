@@ -14,29 +14,29 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            arch: arm64
             suffix: darwin-arm64
-          - os: macos-13
-            arch: x86_64
+            cc_flags: "-target arm64-apple-macos11"
+          - os: macos-latest
             suffix: darwin-x86_64
+            cc_flags: "-target x86_64-apple-macos11"
           - os: ubuntu-latest
-            arch: x86_64
             suffix: linux-x86_64
+            cc_flags: ""
           - os: ubuntu-24.04-arm
-            arch: aarch64
             suffix: linux-aarch64
+            cc_flags: ""
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Build grammar .so files
         run: |
           chmod +x scripts/build-parsers.sh
-          ./scripts/build-parsers.sh ${{ matrix.suffix }}
+          ./scripts/build-parsers.sh "${{ matrix.suffix }}" "${{ matrix.cc_flags }}"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: parsers-${{ matrix.suffix }}
           path: build/parsers/*.so
@@ -48,7 +48,7 @@ jobs:
       contents: write
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: all-parsers
           merge-multiple: true
