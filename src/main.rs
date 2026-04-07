@@ -1,6 +1,7 @@
 mod cli;
 mod setup;
 
+use std::collections::HashMap;
 use std::io::Read;
 use std::process::ExitCode;
 
@@ -9,8 +10,9 @@ use rayon::prelude::*;
 
 use comment_checker::allowlist::Allowlist;
 use comment_checker::checker::{check_comments, filter_by_ranges, Diagnostic};
-use comment_checker::config::load_config;
+use comment_checker::config::{load_config, Config};
 use comment_checker::error::Result;
+use comment_checker::grammar::GrammarCache;
 use comment_checker::input::filesystem::discover_files;
 use comment_checker::input::hook::parse_hook_input;
 use comment_checker::output::{format_jsonl, format_prompt, format_text};
@@ -36,6 +38,13 @@ fn main() -> ExitCode {
                 }
             },
             Command::Uninstall { target } => match setup::uninstall(target) {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(e) => {
+                    eprintln!("error: {e}");
+                    ExitCode::from(2)
+                }
+            },
+            Command::FetchParsers { languages } => match fetch_parsers(&args, languages) {
                 Ok(()) => ExitCode::SUCCESS,
                 Err(e) => {
                     eprintln!("error: {e}");
@@ -80,11 +89,12 @@ fn run(args: &Cli) -> Result<bool> {
     let start_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
     let config = load_config(args.config.as_deref(), &start_dir)?;
     let allowlist = Allowlist::new(&config.allowlist)?;
+    let mut grammar_cache = GrammarCache::new();
 
     let mut diagnostics = if args.hook {
-        run_hook_mode(args, &allowlist)?
+        run_hook_mode(args, &allowlist, &config, &mut grammar_cache)?
     } else {
-        run_cli_mode(args, &allowlist, &config)?
+        run_cli_mode(args, &allowlist, &config, &mut grammar_cache)?
     };
 
     diagnostics.sort_by(|a, b| {
@@ -118,7 +128,12 @@ fn run(args: &Cli) -> Result<bool> {
     Ok(has_diagnostics)
 }
 
-fn run_hook_mode(args: &Cli, allowlist: &Allowlist) -> Result<Vec<Diagnostic>> {
+fn run_hook_mode(
+    args: &Cli,
+    allowlist: &Allowlist,
+    config: &Config,
+    grammar_cache: &mut GrammarCache,
+) -> Result<Vec<Diagnostic>> {
     let mut stdin_data = String::new();
     std::io::stdin()
         .read_to_string(&mut stdin_data)
@@ -148,6 +163,14 @@ fn run_hook_mode(args: &Cli, allowlist: &Allowlist) -> Result<Vec<Diagnostic>> {
         return Ok(Vec::new());
     };
 
+    let ts_language = match grammar_cache.resolve(language, &config.parsers) {
+        Ok(l) => l,
+        Err(e) => {
+            eprintln!("comment-checker: {e}");
+            return Ok(Vec::new());
+        }
+    };
+
     let source = match std::fs::read_to_string(&target.file_path) {
         Ok(s) => s,
         Err(e) => {
@@ -159,7 +182,7 @@ fn run_hook_mode(args: &Cli, allowlist: &Allowlist) -> Result<Vec<Diagnostic>> {
         }
     };
 
-    let comments = match parse_comments(&source, language) {
+    let comments = match parse_comments(&source, language, &ts_language) {
         Some(c) => c,
         None => {
             eprintln!(
@@ -182,7 +205,8 @@ fn run_hook_mode(args: &Cli, allowlist: &Allowlist) -> Result<Vec<Diagnostic>> {
 fn run_cli_mode(
     args: &Cli,
     allowlist: &Allowlist,
-    config: &comment_checker::config::Config,
+    config: &Config,
+    grammar_cache: &mut GrammarCache,
 ) -> Result<Vec<Diagnostic>> {
     let language_filter = if config.languages.is_empty() {
         vec![]
@@ -196,10 +220,40 @@ fn run_cli_mode(
         eprintln!("comment-checker: discovered {} file(s)", files.len());
     }
 
+    // Pre-scan: ensure all needed grammars are loaded
+    let needed_languages: std::collections::HashSet<_> =
+        files.iter().map(|f| f.language).collect();
+    for lang in &needed_languages {
+        if let Err(e) = grammar_cache.resolve(*lang, &config.parsers) {
+            if args.strict {
+                return Err(comment_checker::error::Error::Grammar(e));
+            }
+            eprintln!("warning: {e}");
+        }
+    }
+
+    // Build snapshot of resolved languages for parallel scan
+    let resolved: HashMap<Language, tree_sitter::Language> = needed_languages
+        .iter()
+        .filter_map(|lang| {
+            grammar_cache
+                .get_cached(*lang)
+                .map(|ts| (*lang, ts.clone()))
+        })
+        .collect();
+
     let diagnostics: Vec<Diagnostic> = files
         .par_iter()
         .flat_map(|df| {
             let path_str = df.path.to_string_lossy().into_owned();
+
+            let ts_language = match resolved.get(&df.language) {
+                Some(l) => l,
+                None => {
+                    return Vec::new();
+                }
+            };
+
             let source = match std::fs::read_to_string(&df.path) {
                 Ok(s) => s,
                 Err(e) => {
@@ -208,7 +262,7 @@ fn run_cli_mode(
                 }
             };
 
-            let comments = match parse_comments(&source, df.language) {
+            let comments = match parse_comments(&source, df.language, ts_language) {
                 Some(c) => c,
                 None => {
                     eprintln!(
@@ -222,4 +276,38 @@ fn run_cli_mode(
         .collect();
 
     Ok(diagnostics)
+}
+
+fn fetch_parsers(args: &Cli, languages: &[String]) -> std::result::Result<(), String> {
+    let start_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+    let _config = load_config(args.config.as_deref(), &start_dir)
+        .map_err(|e| format!("{e}"))?;
+
+    let cache_dir = comment_checker::grammar::grammar_cache_dir()
+        .ok_or_else(|| "cannot determine cache directory (HOME not set)".to_string())?;
+
+    let names: Vec<&str> = if languages.is_empty() {
+        Language::all_grammar_names().to_vec()
+    } else {
+        languages.iter().map(|s| s.as_str()).collect()
+    };
+
+    let mut errors = Vec::new();
+    for name in &names {
+        eprint!("Fetching {name}... ");
+        match comment_checker::grammar::download_grammar(name, &cache_dir) {
+            Ok(path) => eprintln!("ok ({})", path.display()),
+            Err(e) => {
+                eprintln!("FAILED: {e}");
+                errors.push(format!("{name}: {e}"));
+            }
+        }
+    }
+
+    if errors.is_empty() {
+        eprintln!("All grammars fetched to {}", cache_dir.display());
+        Ok(())
+    } else {
+        Err(format!("{} grammar(s) failed to download", errors.len()))
+    }
 }
