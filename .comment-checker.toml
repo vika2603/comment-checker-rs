@@ -13,6 +13,24 @@ allowlist = [
   "^Both ranges",
   "^Write tool",
 
+  # Test assertion intent comments (parser_test.rs)
+  "^The fixture has several comments",
+  "^String literals inside source code must not be returned",
+
+  # Grammar cache lifetime explanation (parser_test.rs / snapshot_test.rs)
+  "^Leak the cache so the Library",
+  "^Multiple tests run in the same process",
+  "which invalidates the function pointers",
+
+  # snapshot_test.rs helper doc comment
+  "^Returns None when the nvim parser",
+  "allowing the caller to skip the test gracefully",
+
+  # Test assertion labels (parser_test.rs)
+  "^Comments that should be allowed",
+  "^Ensure \"regular comment\" is not in the allowed list",
+  "^Ensure \"TODO: fix this\" is not in the allowed list",
+
   # Accurate doc comment for is_python_docstring function
   "Returns true if `node` is a Python docstring",
   "`expression_statement` that is the first non-comment statement",

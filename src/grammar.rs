@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::ffi::c_void;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use libloading::{Library, Symbol};
-use sha2::{Sha256, Digest};
 
 use crate::parser::languages::Language;
 
@@ -176,33 +176,7 @@ fn download_url(grammar_name: &str) -> Result<String, String> {
     ))
 }
 
-fn checksums_url() -> String {
-    format!("{DOWNLOAD_BASE_URL}/{PARSERS_VERSION}/checksums.sha256")
-}
 
-fn fetch_checksums() -> Result<HashMap<String, String>, String> {
-    let url = checksums_url();
-    let response = ureq::get(&url)
-        .call()
-        .map_err(|e| format!("download checksums: {e}"))?;
-
-    let body = response
-        .into_body()
-        .read_to_string()
-        .map_err(|e| format!("reading checksums body: {e}"))?;
-
-    let mut map = HashMap::new();
-    for line in body.lines() {
-        let parts: Vec<&str> = line.splitn(2, "  ").collect();
-        if parts.len() == 2 {
-            map.insert(parts[1].trim().to_string(), parts[0].trim().to_string());
-        }
-    }
-    Ok(map)
-}
-
-/// Download a grammar .so to the cache directory with SHA256 verification.
-/// Uses atomic write: download to .tmp, verify, rename.
 pub fn download_grammar(
     grammar_name: &str,
     cache_dir: &Path,
@@ -211,33 +185,28 @@ pub fn download_grammar(
         .map_err(|e| format!("cannot create cache dir {}: {e}", cache_dir.display()))?;
 
     let url = download_url(grammar_name)?;
-    let checksums = fetch_checksums()?;
-
     let tmp_path = cache_dir.join(format!("{grammar_name}.so.tmp"));
     let final_path = cache_dir.join(format!("{grammar_name}.so"));
 
-    let body = ureq::get(&url)
-        .call()
-        .map_err(|e| format!("download {url}: {e}"))?
-        .into_body()
-        .read_to_vec()
-        .map_err(|e| format!("reading response body: {e}"))?;
+    let output = Command::new("curl")
+        .args([
+            "--silent",
+            "--fail",
+            "--show-error",
+            "--retry", "3",
+            "-L",
+            &url,
+            "--output",
+            &tmp_path.to_string_lossy(),
+        ])
+        .output()
+        .map_err(|e| format!("failed to run curl: {e}"))?;
 
-    // Verify SHA256
-    let suffix = platform_suffix()?;
-    let expected_name = format!("tree-sitter-{grammar_name}-{suffix}.so");
-    if let Some(expected_hash) = checksums.get(&expected_name) {
-        let actual_hash = hex::encode(Sha256::digest(&body));
-        if actual_hash != *expected_hash {
-            return Err(format!(
-                "SHA256 mismatch for {expected_name}: expected {expected_hash}, got {actual_hash}"
-            ));
-        }
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let _ = std::fs::remove_file(&tmp_path);
+        return Err(format!("download {url}: {stderr}"));
     }
-
-    // Atomic write: tmp -> rename
-    std::fs::write(&tmp_path, &body)
-        .map_err(|e| format!("writing {}: {e}", tmp_path.display()))?;
 
     #[cfg(unix)]
     {
