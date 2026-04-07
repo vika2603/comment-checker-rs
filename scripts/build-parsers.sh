@@ -5,27 +5,24 @@ SUFFIX="${1:?Usage: build-parsers.sh <platform-suffix>}"
 OUTDIR="build/parsers"
 mkdir -p "$OUTDIR"
 
-declare -A GRAMMARS=(
-  [rust]="tree-sitter/tree-sitter-rust@v0.24.0"
-  [python]="tree-sitter/tree-sitter-python@v0.25.0"
-  [javascript]="tree-sitter/tree-sitter-javascript@v0.25.0"
-  [typescript]="tree-sitter-grammars/tree-sitter-typescript@v0.23.2:typescript/src"
-  [tsx]="tree-sitter-grammars/tree-sitter-typescript@v0.23.2:tsx/src"
-  [go]="tree-sitter/tree-sitter-go@v0.25.0"
-  [java]="tree-sitter-grammars/tree-sitter-java@v0.23.5"
-  [c]="tree-sitter/tree-sitter-c@v0.24.0"
-  [cpp]="tree-sitter-grammars/tree-sitter-cpp@v0.23.4"
-  [ruby]="tree-sitter-grammars/tree-sitter-ruby@v0.23.1"
-  [bash]="tree-sitter-grammars/tree-sitter-bash@v0.25.0"
-)
+GRAMMARS="
+rust       tree-sitter/tree-sitter-rust       v0.24.2
+python     tree-sitter/tree-sitter-python     v0.25.0
+javascript tree-sitter/tree-sitter-javascript v0.25.0
+typescript tree-sitter/tree-sitter-typescript v0.23.2 typescript/src
+tsx        tree-sitter/tree-sitter-typescript v0.23.2 tsx/src
+go         tree-sitter/tree-sitter-go         v0.25.0
+java       tree-sitter/tree-sitter-java       v0.23.5
+c          tree-sitter/tree-sitter-c           v0.24.1
+cpp        tree-sitter/tree-sitter-cpp         v0.23.4
+ruby       tree-sitter/tree-sitter-ruby       v0.23.1
+bash       tree-sitter/tree-sitter-bash       v0.25.1
+"
 
-for lang in "${!GRAMMARS[@]}"; do
-  spec="${GRAMMARS[$lang]}"
-  repo_tag="${spec%%:*}"
-  subdir="${spec#*:}"
-  [ "$subdir" = "$spec" ] && subdir="src"
-  repo="${repo_tag%%@*}"
-  tag="${repo_tag##*@}"
+count=0
+echo "$GRAMMARS" | while read -r lang repo tag subdir; do
+  [ -z "$lang" ] && continue
+  subdir="${subdir:-src}"
 
   echo "=== Building $lang from $repo@$tag ($subdir) ==="
   tmpdir=$(mktemp -d)
@@ -34,12 +31,12 @@ for lang in "${!GRAMMARS[@]}"; do
   srcdir="$tmpdir/$subdir"
   outfile="$OUTDIR/tree-sitter-${lang}-${SUFFIX}.so"
 
-  sources=("$srcdir/parser.c")
-  [ -f "$srcdir/scanner.c" ] && sources+=("$srcdir/scanner.c")
+  sources="$srcdir/parser.c"
+  [ -f "$srcdir/scanner.c" ] && sources="$sources $srcdir/scanner.c"
 
   cc -shared -fPIC -O2 \
     -I "$srcdir" \
-    "${sources[@]}" \
+    $sources \
     -o "$outfile"
 
   chmod 755 "$outfile"
@@ -47,4 +44,4 @@ for lang in "${!GRAMMARS[@]}"; do
   echo "  -> $outfile ($(du -h "$outfile" | cut -f1))"
 done
 
-echo "=== Done: $(ls "$OUTDIR"/*.so | wc -l) parsers built ==="
+echo "=== Done: $(ls "$OUTDIR"/*.so 2>/dev/null | wc -l) parsers built ==="
