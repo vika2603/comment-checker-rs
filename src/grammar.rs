@@ -3,8 +3,13 @@ use std::ffi::c_void;
 use std::path::{Path, PathBuf};
 
 use libloading::{Library, Symbol};
+use sha2::{Sha256, Digest};
 
 use crate::parser::languages::Language;
+
+const DOWNLOAD_BASE_URL: &str =
+    "https://github.com/anthropics/comment-checker/releases/download";
+const PARSERS_VERSION: &str = "parsers-v1";
 
 pub struct GrammarCache {
     loaded: HashMap<String, LoadedGrammar>,
@@ -100,6 +105,118 @@ fn load_grammar_from_path(path: &Path, lang: Language) -> Result<LoadedGrammar, 
     })
 }
 
+fn platform_suffix() -> Result<&'static str, String> {
+    match (std::env::consts::OS, std::env::consts::ARCH) {
+        ("macos", "aarch64") => Ok("darwin-arm64"),
+        ("macos", "x86_64") => Ok("darwin-x86_64"),
+        ("linux", "x86_64") => Ok("linux-x86_64"),
+        ("linux", "aarch64") => Ok("linux-aarch64"),
+        (os, arch) => Err(format!("unsupported platform: {os}-{arch}")),
+    }
+}
+
+fn download_url(grammar_name: &str) -> Result<String, String> {
+    let suffix = platform_suffix()?;
+    Ok(format!(
+        "{DOWNLOAD_BASE_URL}/{PARSERS_VERSION}/tree-sitter-{grammar_name}-{suffix}.so"
+    ))
+}
+
+fn checksums_url() -> String {
+    format!("{DOWNLOAD_BASE_URL}/{PARSERS_VERSION}/checksums.sha256")
+}
+
+fn fetch_checksums() -> Result<HashMap<String, String>, String> {
+    let url = checksums_url();
+    let response = ureq::get(&url)
+        .call()
+        .map_err(|e| format!("download checksums: {e}"))?;
+
+    let body = response
+        .into_body()
+        .read_to_string()
+        .map_err(|e| format!("reading checksums body: {e}"))?;
+
+    let mut map = HashMap::new();
+    for line in body.lines() {
+        let parts: Vec<&str> = line.splitn(2, "  ").collect();
+        if parts.len() == 2 {
+            map.insert(parts[1].trim().to_string(), parts[0].trim().to_string());
+        }
+    }
+    Ok(map)
+}
+
+/// Download a grammar .so to the cache directory with SHA256 verification.
+/// Uses atomic write: download to .tmp, verify, rename.
+pub fn download_grammar(
+    grammar_name: &str,
+    cache_dir: &Path,
+) -> Result<PathBuf, String> {
+    std::fs::create_dir_all(cache_dir)
+        .map_err(|e| format!("cannot create cache dir {}: {e}", cache_dir.display()))?;
+
+    let url = download_url(grammar_name)?;
+    let checksums = fetch_checksums()?;
+
+    let tmp_path = cache_dir.join(format!("{grammar_name}.so.tmp"));
+    let final_path = cache_dir.join(format!("{grammar_name}.so"));
+
+    let body = ureq::get(&url)
+        .call()
+        .map_err(|e| format!("download {url}: {e}"))?
+        .into_body()
+        .read_to_vec()
+        .map_err(|e| format!("reading response body: {e}"))?;
+
+    // Verify SHA256
+    let suffix = platform_suffix()?;
+    let expected_name = format!("tree-sitter-{grammar_name}-{suffix}.so");
+    if let Some(expected_hash) = checksums.get(&expected_name) {
+        let actual_hash = hex::encode(Sha256::digest(&body));
+        if actual_hash != *expected_hash {
+            return Err(format!(
+                "SHA256 mismatch for {expected_name}: expected {expected_hash}, got {actual_hash}"
+            ));
+        }
+    }
+
+    // Atomic write: tmp -> rename
+    std::fs::write(&tmp_path, &body)
+        .map_err(|e| format!("writing {}: {e}", tmp_path.display()))?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let perms = std::fs::Permissions::from_mode(0o755);
+        std::fs::set_permissions(&tmp_path, perms)
+            .map_err(|e| format!("chmod {}: {e}", tmp_path.display()))?;
+    }
+
+    std::fs::rename(&tmp_path, &final_path)
+        .map_err(|e| format!("rename {} -> {}: {e}", tmp_path.display(), final_path.display()))?;
+
+    Ok(final_path)
+}
+
+fn xdg_data_dir() -> Option<PathBuf> {
+    if let Ok(xdg) = std::env::var("XDG_DATA_HOME") {
+        Some(PathBuf::from(xdg))
+    } else {
+        std::env::var("HOME").ok().map(|h| PathBuf::from(h).join(".local/share"))
+    }
+}
+
+pub fn grammar_cache_dir() -> Option<PathBuf> {
+    let base = if let Ok(xdg) = std::env::var("XDG_CACHE_HOME") {
+        PathBuf::from(xdg)
+    } else {
+        let home = std::env::var("HOME").ok()?;
+        PathBuf::from(home).join(".cache")
+    };
+    Some(base.join("comment-checker/parsers"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -151,5 +268,22 @@ mod tests {
     fn test_jsx_reuses_javascript() {
         assert_eq!(Language::Jsx.so_file_name(), Language::JavaScript.so_file_name());
         assert_eq!(Language::Jsx.symbol_name(), Language::JavaScript.symbol_name());
+    }
+
+    #[test]
+    fn test_download_url_format() {
+        let url = download_url("rust").unwrap();
+        assert!(url.contains("tree-sitter-rust-"));
+        assert!(url.contains(".so"));
+        assert!(url.starts_with("https://"));
+    }
+
+    #[test]
+    fn test_platform_suffix() {
+        let suffix = platform_suffix().unwrap();
+        assert!(
+            ["darwin-arm64", "darwin-x86_64", "linux-x86_64", "linux-aarch64"]
+                .contains(&suffix)
+        );
     }
 }

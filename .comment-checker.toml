@@ -33,4 +33,9 @@ allowlist = [
   "raw fn ptr",
   "verified working with libloading",
   "^Validate ABI",
+
+  # Download and integrity verification (grammar.rs)
+  "atomic write.*tmp.*verify.*rename",
+  "^Verify SHA256",
+  "^Atomic write.*tmp.*rename",
 ]
