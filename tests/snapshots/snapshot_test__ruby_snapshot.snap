@@ -1,0 +1,8 @@
+---
+source: tests/snapshot_test.rs
+expression: "check_fixture(\"ruby.rb\")"
+---
+tests/fixtures/ruby.rb:3:0: warning[comment]: # This is a regular comment - should be FLAGGED
+tests/fixtures/ruby.rb:4:0: warning[comment]: # TODO: implement this - should be FLAGGED
+tests/fixtures/ruby.rb:10:2: warning[comment]: # Another regular comment - should be FLAGGED
+tests/fixtures/ruby.rb:18:0: warning[comment]:  =begin

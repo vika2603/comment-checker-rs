@@ -1,0 +1,13 @@
+---
+source: tests/snapshot_test.rs
+expression: "check_fixture(\"python.py\")"
+---
+tests/fixtures/python.py:1:0: warning[comment]: """ This is a module docstring - should be FLAGGED"""
+tests/fixtures/python.py:3:0: warning[comment]: # This is a regular comment - should be FLAGGED
+tests/fixtures/python.py:4:0: warning[comment]: # TODO: fix this - should be FLAGGED
+tests/fixtures/python.py:13:4: warning[comment]: """ This is a function docstring - should be FLAGGED"""
+tests/fixtures/python.py:14:4: warning[comment]: # Another regular comment - should be FLAGGED
+tests/fixtures/python.py:19:4: warning[comment]: """ This is a class docstring - should be FLAGGED"""
+tests/fixtures/python.py:28:0: warning[comment]: # Multi-line block using consecutive lines:
+tests/fixtures/python.py:29:0: warning[comment]: # Line one of block - should be FLAGGED
+tests/fixtures/python.py:30:0: warning[comment]: # Line two of block - should be FLAGGED

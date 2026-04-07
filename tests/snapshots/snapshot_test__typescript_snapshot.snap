@@ -1,0 +1,9 @@
+---
+source: tests/snapshot_test.rs
+expression: "check_fixture(\"typescript.ts\")"
+---
+tests/fixtures/typescript.ts:1:0: warning[comment]: // This is a regular line comment - should be FLAGGED
+tests/fixtures/typescript.ts:3:0: warning[comment]: /* This is a block comment - should be FLAGGED
+tests/fixtures/typescript.ts:5:0: warning[comment]: /** * This is a TSDoc comment - should be FLAGGED
+tests/fixtures/typescript.ts:18:4: warning[comment]: /* block comment on interface - should be FLAGGED
+tests/fixtures/typescript.ts:25:0: warning[comment]: // TODO: add validation - should be FLAGGED

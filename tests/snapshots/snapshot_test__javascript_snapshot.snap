@@ -1,0 +1,10 @@
+---
+source: tests/snapshot_test.rs
+expression: "check_fixture(\"javascript.js\")"
+---
+tests/fixtures/javascript.js:1:0: warning[comment]: // This is a regular line comment - should be FLAGGED
+tests/fixtures/javascript.js:3:0: warning[comment]: /* This is a block comment - should be FLAGGED
+tests/fixtures/javascript.js:5:0: warning[comment]: /** * This is a JSDoc comment - should be FLAGGED
+tests/fixtures/javascript.js:16:0: warning[comment]: /* Multi-line block comment
+tests/fixtures/javascript.js:19:35: warning[comment]: // inline comment - should be FLAGGED
+tests/fixtures/javascript.js:24:0: warning[comment]: // TODO: implement this - should be FLAGGED

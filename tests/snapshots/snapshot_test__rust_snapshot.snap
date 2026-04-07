@@ -1,0 +1,11 @@
+---
+source: tests/snapshot_test.rs
+expression: "check_fixture(\"rust.rs\")"
+---
+tests/fixtures/rust.rs:1:0: warning[comment]: // This is a regular comment - should be FLAGGED
+tests/fixtures/rust.rs:2:0: warning[comment]: /// This is a doc comment - should be FLAGGED
+tests/fixtures/rust.rs:3:0: warning[comment]: //! This is a module doc comment - should be FLAGGED
+tests/fixtures/rust.rs:4:0: warning[comment]: /* Block comment - should be FLAGGED
+tests/fixtures/rust.rs:5:0: warning[comment]: /** Doc block comment - should be FLAGGED
+tests/fixtures/rust.rs:16:16: warning[comment]: // inline comment - should be FLAGGED
+tests/fixtures/rust.rs:19:0: warning[comment]: // TODO: fix this -- should be FLAGGED (not in allowlist)

@@ -1,0 +1,9 @@
+---
+source: tests/snapshot_test.rs
+expression: "check_fixture(\"java.java\")"
+---
+tests/fixtures/java.java:1:0: warning[comment]: // This is a regular line comment - should be FLAGGED
+tests/fixtures/java.java:3:0: warning[comment]: /* This is a block comment - should be FLAGGED
+tests/fixtures/java.java:5:0: warning[comment]: /** * This is a Javadoc comment - should be FLAGGED
+tests/fixtures/java.java:14:4: warning[comment]: /* Multi-line block comment
+tests/fixtures/java.java:23:4: warning[comment]: // TODO: add validation - should be FLAGGED

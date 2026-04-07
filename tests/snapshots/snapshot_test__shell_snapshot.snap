@@ -1,0 +1,7 @@
+---
+source: tests/snapshot_test.rs
+expression: "check_fixture(\"shell.sh\")"
+---
+tests/fixtures/shell.sh:3:0: warning[comment]: # This is a regular comment - should be FLAGGED
+tests/fixtures/shell.sh:4:0: warning[comment]: # TODO: add error handling - should be FLAGGED
+tests/fixtures/shell.sh:10:4: warning[comment]: # Another regular comment - should be FLAGGED

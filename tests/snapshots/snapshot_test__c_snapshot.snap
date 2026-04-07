@@ -1,0 +1,9 @@
+---
+source: tests/snapshot_test.rs
+expression: "check_fixture(\"c_test.c\")"
+---
+tests/fixtures/c_test.c:1:0: warning[comment]: // This is a regular line comment - should be FLAGGED
+tests/fixtures/c_test.c:3:0: warning[comment]: /* This is a block comment - should be FLAGGED
+tests/fixtures/c_test.c:9:0: warning[comment]: /* * Multi-line block comment
+tests/fixtures/c_test.c:14:4: warning[comment]: // Another regular comment - should be FLAGGED
+tests/fixtures/c_test.c:24:0: warning[comment]: // TODO: handle null pointer - should be FLAGGED

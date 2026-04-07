@@ -1,0 +1,10 @@
+---
+source: tests/snapshot_test.rs
+expression: "check_fixture(\"go.go\")"
+---
+tests/fixtures/go.go:1:0: warning[comment]: // Package main is the entry point - should be FLAGGED
+tests/fixtures/go.go:9:0: warning[comment]: /* Block comment - should be FLAGGED
+tests/fixtures/go.go:11:0: warning[comment]: // Greet prints a greeting message - should be FLAGGED
+tests/fixtures/go.go:13:1: warning[comment]: // Regular inline comment - should be FLAGGED
+tests/fixtures/go.go:17:0: warning[comment]: /* Multi-line block comment
+tests/fixtures/go.go:23:0: warning[comment]: // TODO: add error handling - should be FLAGGED
