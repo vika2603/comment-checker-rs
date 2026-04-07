@@ -17,4 +17,10 @@ allowlist = [
   "Returns true if `node` is a Python docstring",
   "`expression_statement` that is the first non-comment statement",
   "module, class body, or function body",
+
+  # Dynamic grammar loading doc comments (so_file_name, symbol_name, grammar_name methods)
+  "\\.so",
+  "^The C symbol exported",
+  "^The grammar name used in download URLs",
+  "^All distinct grammar names",
 ]
