@@ -24,9 +24,9 @@ detect_platform() {
 }
 
 get_latest_version() {
-  curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
-    | grep '"tag_name"' \
-    | sed 's/.*"tag_name": *"//;s/".*//'
+  curl -fsSI "https://github.com/${REPO}/releases/latest" 2>/dev/null \
+    | grep -i '^location:' \
+    | sed 's|.*/tag/||;s/[[:space:]]*$//'
 }
 
 main() {
