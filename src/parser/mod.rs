@@ -30,21 +30,22 @@ fn walk_for_comments<'a>(
     let type_name = node.kind();
 
     // All tree-sitter grammars name comment nodes with "comment" in the type
-    if type_name.contains("comment") {
-        if let Some(comment) = extract_comment(node, source, lang) {
-            out.push(comment);
-            // Do not recurse into comment nodes
-            return;
-        }
+    if type_name.contains("comment")
+        && let Some(comment) = extract_comment(node, source, lang)
+    {
+        out.push(comment);
+        // Do not recurse into comment nodes
+        return;
     }
 
     // Python docstrings: expression_statement containing a string literal
     // at module / class / function body level
-    if lang == Language::Python && is_python_docstring(node, source) {
-        if let Some(comment) = extract_python_docstring(node, source) {
-            out.push(comment);
-            return;
-        }
+    if lang == Language::Python
+        && is_python_docstring(node, source)
+        && let Some(comment) = extract_python_docstring(node, source)
+    {
+        out.push(comment);
+        return;
     }
 
     let mut cursor = node.walk();

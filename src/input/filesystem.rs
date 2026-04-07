@@ -40,10 +40,10 @@ pub fn discover_files(
 
         for entry in walker.flatten() {
             let path = entry.path().to_path_buf();
-            if path.is_file() {
-                if let Some(file) = check_file(&path, max_file_size, language_filter) {
-                    results.push(file);
-                }
+            if path.is_file()
+                && let Some(file) = check_file(&path, max_file_size, language_filter)
+            {
+                results.push(file);
             }
         }
     }

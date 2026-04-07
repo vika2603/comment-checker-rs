@@ -11,7 +11,7 @@ impl Allowlist {
     pub fn new(user_patterns: &[String]) -> Result<Self, regex::Error> {
         let builtin = builtin_patterns()
             .into_iter()
-            .map(|p| Regex::new(p))
+            .map(Regex::new)
             .collect::<Result<Vec<_>, _>>()?;
 
         let user = user_patterns

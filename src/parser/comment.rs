@@ -53,8 +53,7 @@ fn strip_comment(raw: &str, kind: CommentKind) -> (&str, String) {
         CommentKind::Block => &["/*"],
     };
     for prefix in prefixes {
-        if trimmed.starts_with(prefix) {
-            let after = &trimmed[prefix.len()..];
+        if let Some(after) = trimmed.strip_prefix(prefix) {
             let is_block_style = kind == CommentKind::Block
                 || (kind == CommentKind::Doc && (*prefix == "/**" || *prefix == "/*!"));
             let after = if is_block_style {
