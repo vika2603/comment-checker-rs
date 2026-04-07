@@ -1,9 +1,7 @@
+use minijinja::{context, Environment};
 use serde::Serialize;
 
 use crate::checker::Diagnostic;
-
-/// Plain-text format: one line per diagnostic.
-/// Format: `file:line:col: warning[comment]: first line of raw text`
 pub fn format_text(diagnostics: &[Diagnostic]) -> String {
     let mut out = String::new();
     for d in diagnostics {
@@ -67,41 +65,46 @@ pub fn format_jsonl(diagnostics: &[Diagnostic]) -> String {
 }
 
 const DEFAULT_TEMPLATE: &str = r#"<comment-checker>
-<summary>Found {{count}} flagged comment(s) that may need attention.</summary>
-<flagged-comments>{{comments}}</flagged-comments>
+<summary>Found {{ count }} flagged comment(s) that may need attention.</summary>
+<flagged-comments>
+{% for c in comments %}<comment file="{{ c.file }}" line="{{ c.line }}" type="{{ c.kind }}">{{ c.text }}</comment>
+{% endfor %}</flagged-comments>
 <instruction>Review each flagged comment. If the comment is outdated, inaccurate, or unnecessary, remove or update it. If the comment is valid and intentional, add a pattern to the allowlist in .comment-checker.toml to suppress this warning.</instruction>
 </comment-checker>"#;
 
-/// Prompt format: XML block suitable for injecting into an LLM prompt.
-/// `template` may contain `{{comments}}` and `{{count}}` placeholders.
+#[derive(Serialize)]
+struct PromptComment {
+    file: String,
+    line: usize,
+    kind: String,
+    text: String,
+}
+
 pub fn format_prompt(diagnostics: &[Diagnostic], template: Option<&str>) -> String {
     if diagnostics.is_empty() {
         return String::new();
     }
+
+    let comments: Vec<PromptComment> = diagnostics
+        .iter()
+        .map(|d| PromptComment {
+            file: d.file.clone(),
+            line: d.comment.span.start_line,
+            kind: d.comment.kind.to_string(),
+            text: d.comment.raw_text().lines().next().unwrap_or("").trim_end().to_string(),
+        })
+        .collect();
+
     let tmpl = template.unwrap_or(DEFAULT_TEMPLATE);
+    let mut env = Environment::new();
+    env.set_auto_escape_callback(|_| minijinja::AutoEscape::None);
+    env.add_template("prompt", tmpl).unwrap_or_else(|_| {
+        env.add_template("prompt", DEFAULT_TEMPLATE).unwrap();
+    });
 
-    let mut comments_block = String::new();
-    for d in diagnostics {
-        let raw = d
-            .comment
-            .raw_text()
-            .lines()
-            .next()
-            .unwrap_or("")
-            .trim_end()
-            .to_string();
-        comments_block.push_str(&format!(
-            "<comment file=\"{}\" line=\"{}\" type=\"{}\">{}</comment>\n",
-            d.file,
-            d.comment.span.start_line,
-            d.comment.kind,
-            raw,
-        ));
-    }
-    let comments_block = comments_block.trim_end_matches('\n');
-
-    tmpl.replace("{{count}}", &diagnostics.len().to_string())
-        .replace("{{comments}}", comments_block)
+    env.get_template("prompt")
+        .and_then(|t| t.render(context! { count => diagnostics.len(), comments => comments }))
+        .unwrap_or_default()
 }
 
 #[cfg(test)]
@@ -155,8 +158,11 @@ mod tests {
     #[test]
     fn test_format_prompt_custom_template() {
         let diags = vec![make_diag("a.rs", "x", 1)];
-        let out = format_prompt(&diags, Some("COUNT={{count}} COMMENTS={{comments}}"));
+        let out = format_prompt(
+            &diags,
+            Some("COUNT={{ count }} COMMENTS={% for c in comments %}{{ c.text }}{% endfor %}"),
+        );
         assert!(out.starts_with("COUNT=1"));
-        assert!(out.contains("COMMENTS=<comment"));
+        assert!(out.contains("COMMENTS=// x"));
     }
 }
