@@ -118,7 +118,7 @@ fn test_hook_write_tool_exits_1_with_prompt_output() {
         .write_stdin(json)
         .assert()
         .code(1)
-        .stdout(predicate::str::contains("<comment-checker>"));
+        .stderr(predicate::str::contains("<comment-checker>"));
 }
 
 #[test]
@@ -167,7 +167,7 @@ fn test_hook_with_python_fixture_exits_1() {
         .write_stdin(json)
         .assert()
         .code(1)
-        .stdout(predicate::str::contains("<comment-checker>"));
+        .stderr(predicate::str::contains("<comment-checker>"));
 }
 
 #[test]
@@ -293,5 +293,5 @@ fn test_hook_edit_tool_filters_by_range() {
         .write_stdin(json)
         .assert()
         .code(1)
-        .stdout(predicate::str::contains("<comment-checker>"));
+        .stderr(predicate::str::contains("<comment-checker>"));
 }

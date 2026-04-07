@@ -88,7 +88,11 @@ fn run(args: &Cli) -> Result<bool> {
             }
         };
         if !output.is_empty() {
-            print!("{output}");
+            if args.hook {
+                eprint!("{output}");
+            } else {
+                print!("{output}");
+            }
         }
     }
 
