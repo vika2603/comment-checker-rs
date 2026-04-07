@@ -74,6 +74,60 @@ impl GrammarCache {
     pub fn get_cached(&self, lang: Language) -> Option<&tree_sitter::Language> {
         self.loaded.get(lang.grammar_name()).map(|g| &g.language)
     }
+
+    /// Build the ordered list of directories to search for grammar .so files.
+    pub fn build_search_dirs(parser_config: &crate::config::ParserConfig) -> Vec<PathBuf> {
+        let mut dirs = Vec::new();
+
+        if let Some(ref path) = parser_config.path {
+            dirs.push(path.clone());
+        }
+
+        if parser_config.use_nvim_parsers {
+            if let Some(data_dir) = xdg_data_dir() {
+                dirs.push(data_dir.join("nvim/site/parser"));
+            }
+        }
+
+        if let Some(cache) = grammar_cache_dir() {
+            dirs.push(cache);
+        }
+
+        dirs
+    }
+
+    /// Resolve a grammar: search dirs first, then optionally download.
+    pub fn resolve(
+        &mut self,
+        lang: Language,
+        parser_config: &crate::config::ParserConfig,
+    ) -> Result<tree_sitter::Language, String> {
+        let search_dirs = Self::build_search_dirs(parser_config);
+
+        match self.get(lang, &search_dirs) {
+            Ok(ts_lang) => return Ok(ts_lang),
+            Err(_) if !parser_config.auto_download => {}
+            Err(_) => {
+                if let Some(cache_dir) = grammar_cache_dir() {
+                    match download_grammar(lang.grammar_name(), &cache_dir) {
+                        Ok(_) => {
+                            return self.get(lang, &[cache_dir]);
+                        }
+                        Err(e) => {
+                            eprintln!("warning: download failed for {}: {e}", lang.grammar_name());
+                        }
+                    }
+                }
+            }
+        }
+
+        Err(format!(
+            "grammar '{}' not available (searched {} dirs, download {})",
+            lang.grammar_name(),
+            search_dirs.len(),
+            if parser_config.auto_download { "attempted" } else { "disabled" }
+        ))
+    }
 }
 
 fn load_grammar_from_path(path: &Path, lang: Language) -> Result<LoadedGrammar, String> {
@@ -268,6 +322,24 @@ mod tests {
     fn test_jsx_reuses_javascript() {
         assert_eq!(Language::Jsx.so_file_name(), Language::JavaScript.so_file_name());
         assert_eq!(Language::Jsx.symbol_name(), Language::JavaScript.symbol_name());
+    }
+
+    #[test]
+    fn test_build_search_dirs_default() {
+        let config = crate::config::ParserConfig::default();
+        let dirs = GrammarCache::build_search_dirs(&config);
+        assert!(!dirs.is_empty());
+    }
+
+    #[test]
+    fn test_build_search_dirs_custom_path() {
+        let config = crate::config::ParserConfig {
+            path: Some(PathBuf::from("/custom/parsers")),
+            use_nvim_parsers: false,
+            auto_download: false,
+        };
+        let dirs = GrammarCache::build_search_dirs(&config);
+        assert_eq!(dirs[0], PathBuf::from("/custom/parsers"));
     }
 
     #[test]

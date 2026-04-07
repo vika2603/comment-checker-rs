@@ -34,6 +34,13 @@ allowlist = [
   "verified working with libloading",
   "^Validate ABI",
 
+  # Config loading doc comment (config.rs)
+  "^Load config from the first location",
+
+  # Grammar resolution chain (grammar.rs)
+  "^Resolve a grammar.*search dirs.*download",
+  "^Build the ordered list of directories",
+
   # Download and integrity verification (grammar.rs)
   "atomic write.*tmp.*verify.*rename",
   "^Verify SHA256",
