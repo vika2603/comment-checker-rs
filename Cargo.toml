@@ -17,7 +17,7 @@ rayon = "1"
 minijinja = "2"
 tree-sitter = "~0.26"
 tree-sitter-language = "0.1"
-libloading = "0.8"
+libloading = "0.9"
 
 [dev-dependencies]
 insta = { version = "1", features = ["yaml"] }
