@@ -30,7 +30,7 @@ fn test_no_args_exits_2() {
     bin()
         .assert()
         .code(2)
-        .stderr(predicate::str::contains("Either --hook or at least one path is required"));
+        .stderr(predicate::str::contains("Either --hook"));
 }
 
 #[test]

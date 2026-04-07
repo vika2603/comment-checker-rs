@@ -1,9 +1,12 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(name = "comment-checker", version, about = "Check code comments using tree-sitter AST parsing")]
 pub struct Cli {
+    #[command(subcommand)]
+    pub command: Option<Command>,
+
     /// Files or directories to check
     #[arg()]
     pub paths: Vec<PathBuf>,
@@ -37,6 +40,28 @@ pub struct Cli {
     pub verbose: bool,
 }
 
+#[derive(Subcommand, Debug)]
+pub enum Command {
+    /// Install comment-checker hook for an AI coding tool
+    Init {
+        /// Target tool: claude, codex
+        #[arg(value_enum)]
+        target: Target,
+    },
+    /// Uninstall comment-checker hook from an AI coding tool
+    Uninstall {
+        /// Target tool: claude, codex
+        #[arg(value_enum)]
+        target: Target,
+    },
+}
+
+#[derive(Debug, Clone, clap::ValueEnum)]
+pub enum Target {
+    Claude,
+    Codex,
+}
+
 #[derive(Debug, Clone, clap::ValueEnum)]
 pub enum OutputFormat {
     Text,
@@ -45,8 +70,11 @@ pub enum OutputFormat {
 
 impl Cli {
     pub fn validate(&self) -> std::result::Result<(), String> {
+        if self.command.is_some() {
+            return Ok(());
+        }
         if !self.hook && self.paths.is_empty() {
-            return Err("Either --hook or at least one path is required".to_string());
+            return Err("Either --hook, a subcommand, or at least one path is required".to_string());
         }
         if self.hook && !self.paths.is_empty() {
             return Err("Cannot use --hook with path arguments".to_string());

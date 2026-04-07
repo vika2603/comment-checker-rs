@@ -1,4 +1,5 @@
 mod cli;
+mod setup;
 
 use std::io::Read;
 use std::process::ExitCode;
@@ -15,7 +16,7 @@ use comment_checker::input::hook::parse_hook_input;
 use comment_checker::output::{format_jsonl, format_prompt, format_text};
 use comment_checker::parser::{languages::Language, parse_comments};
 
-use cli::{Cli, OutputFormat};
+use cli::{Cli, Command, OutputFormat};
 
 fn main() -> ExitCode {
     let args = Cli::parse();
@@ -23,6 +24,25 @@ fn main() -> ExitCode {
     if let Err(msg) = args.validate() {
         eprintln!("error: {msg}");
         return ExitCode::from(2);
+    }
+
+    if let Some(ref cmd) = args.command {
+        return match cmd {
+            Command::Init { target } => match setup::init(target) {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(e) => {
+                    eprintln!("error: {e}");
+                    ExitCode::from(2)
+                }
+            },
+            Command::Uninstall { target } => match setup::uninstall(target) {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(e) => {
+                    eprintln!("error: {e}");
+                    ExitCode::from(2)
+                }
+            },
+        };
     }
 
     if args.hook {
