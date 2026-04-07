@@ -68,8 +68,7 @@ fn strip_comment(raw: &str, kind: CommentKind) -> (&str, String) {
             } else {
                 after
             };
-            // For block-style comments trim both sides; for line comments only
-            // strip a single leading space to preserve intentional indentation.
+            // Strip a single leading space from line comments to preserve intentional indentation.
             let content = if is_block_style {
                 after.trim().to_string()
             } else {

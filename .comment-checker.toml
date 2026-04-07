@@ -1,0 +1,15 @@
+# comment-checker's own config -- dogfooding the tool
+#
+# Patterns matched against stripped comment content (prefix removed).
+
+allowlist = [
+  # Allowlist section headers (organizing long pattern lists)
+  "^(Linter|Rust|Compiler|Type|Shebang|Encoding|License|BDD|Region)",
+
+  # Test explanation comments (line N, buffer, etc.)
+  "^\"",
+  "\\bline \\d+\\b",
+  "merged$",
+  "^Both ranges",
+  "^Write tool",
+]

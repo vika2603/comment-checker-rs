@@ -29,12 +29,11 @@ fn walk_for_comments<'a>(
 ) {
     let type_name = node.kind();
 
-    // All tree-sitter grammars name comment nodes with "comment" in the type
+    // All tree-sitter grammars name comment nodes with "comment" in the type.
     if type_name.contains("comment")
         && let Some(comment) = extract_comment(node, source, lang)
     {
         out.push(comment);
-        // Do not recurse into comment nodes
         return;
     }
 
@@ -54,38 +53,34 @@ fn walk_for_comments<'a>(
     }
 }
 
-/// Determine whether an `expression_statement` node is a Python docstring.
-/// A docstring is a string literal that is the sole statement at the start of
-/// a module, class body, or function body.
+/// Returns true if `node` is a Python docstring: a string-literal
+/// `expression_statement` that is the first non-comment statement in a
+/// module, class body, or function body.
 fn is_python_docstring(node: Node<'_>, source: &str) -> bool {
     if node.kind() != "expression_statement" {
         return false;
     }
 
-    // The expression_statement must have exactly one child: a string
     let mut cursor = node.walk();
     let children: Vec<_> = node.children(&mut cursor).collect();
     if children.len() != 1 || children[0].kind() != "string" {
         return false;
     }
 
-    // The parent should be a module, block (class/function body)
     if let Some(parent) = node.parent() {
         let parent_kind = parent.kind();
         if parent_kind == "module" || parent_kind == "block" {
-            // It should be the first non-comment statement in the parent
             let mut sibling_cursor = parent.walk();
             for sibling in parent.children(&mut sibling_cursor) {
                 if sibling.kind().contains("comment") {
                     continue;
                 }
-                // The first non-comment child should be our node
                 return sibling.id() == node.id();
             }
         }
     }
 
-    // Fallback: check raw text for triple-quote strings
+    // Fallback: accept any triple-quoted string
     let text = node_text(node, source);
     text.starts_with("\"\"\"") || text.starts_with("'''")
 }
@@ -106,7 +101,6 @@ fn extract_comment(node: Node<'_>, source: &str, _lang: Language) -> Option<Comm
 fn classify_comment(raw: &str, type_name: &str) -> CommentKind {
     let trimmed = raw.trim();
 
-    // Doc comments by prefix
     if trimmed.starts_with("///")
         || trimmed.starts_with("//!")
         || trimmed.starts_with("/**")
@@ -115,15 +109,13 @@ fn classify_comment(raw: &str, type_name: &str) -> CommentKind {
         return CommentKind::Doc;
     }
 
-    // Block comments by type name or multi-line marker
     if type_name.contains("block")
         || type_name == "comment" && trimmed.starts_with("/*")
     {
         return CommentKind::Block;
     }
 
-    // Multiline string comments (Python triple-quoted handled separately, but
-    // guard here too)
+    // Python triple-quoted strings not caught by the expression_statement path
     if trimmed.starts_with("\"\"\"") || trimmed.starts_with("'''") {
         return CommentKind::Doc;
     }
@@ -141,7 +133,7 @@ fn node_to_span(node: Node<'_>) -> Span {
     let start = node.start_position();
     let end = node.end_position();
     Span {
-        start_line: start.row + 1, // tree-sitter is 0-based
+        start_line: start.row + 1,
         start_col: start.column,
         end_line: end.row + 1,
         end_col: end.column,

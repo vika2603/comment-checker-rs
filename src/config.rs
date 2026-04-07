@@ -21,7 +21,6 @@ pub fn load_config(explicit_path: Option<&Path>, start_dir: &Path) -> Result<Con
         return read_config(path);
     }
 
-    // Walk up directory tree
     let mut dir = start_dir.to_path_buf();
     loop {
         let candidate = dir.join(".comment-checker.toml");
@@ -34,7 +33,6 @@ pub fn load_config(explicit_path: Option<&Path>, start_dir: &Path) -> Result<Con
         }
     }
 
-    // XDG config
     let xdg_config = xdg_config_dir();
     let xdg_candidate = xdg_config.join("comment-checker").join("config.toml");
     if xdg_candidate.exists() {

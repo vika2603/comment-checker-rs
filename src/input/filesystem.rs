@@ -58,18 +58,15 @@ fn check_file(
 ) -> Option<DiscoveredFile> {
     let language = Language::from_path(path)?;
 
-    // Apply language filter if specified
     if !language_filter.is_empty() && !language_filter.iter().any(|f| f == language.name()) {
         return None;
     }
 
-    // Check file size
     let metadata = std::fs::metadata(path).ok()?;
     if metadata.len() > max_file_size {
         return None;
     }
 
-    // Binary check: look for NUL bytes in first 8192 bytes
     if is_binary(path) {
         return None;
     }

@@ -98,7 +98,6 @@ pub fn format_prompt(diagnostics: &[Diagnostic], template: Option<&str>) -> Stri
             raw,
         ));
     }
-    // Trim trailing newline from the comments block
     let comments_block = comments_block.trim_end_matches('\n');
 
     tmpl.replace("{{count}}", &diagnostics.len().to_string())

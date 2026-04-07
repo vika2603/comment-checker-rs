@@ -26,7 +26,7 @@ fn main() -> ExitCode {
     }
 
     if args.hook {
-        // Hook mode: errors must not block the agent — exit 0 on any error
+        // Errors in hook mode must not block the agent — always exit 0 on error
         match run(&args) {
             Ok(has_diagnostics) => {
                 if has_diagnostics {
@@ -41,7 +41,6 @@ fn main() -> ExitCode {
             }
         }
     } else {
-        // CLI mode: errors exit 2
         match run(&args) {
             Ok(has_diagnostics) => {
                 if has_diagnostics {
@@ -59,11 +58,8 @@ fn main() -> ExitCode {
 }
 
 fn run(args: &Cli) -> Result<bool> {
-    // Resolve config
     let start_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
     let config = load_config(args.config.as_deref(), &start_dir)?;
-
-    // Merge allowlist patterns from config + CLI is not needed (config carries them)
     let allowlist = Allowlist::new(&config.allowlist)?;
 
     let mut diagnostics = if args.hook {
@@ -72,7 +68,6 @@ fn run(args: &Cli) -> Result<bool> {
         run_cli_mode(args, &allowlist, &config)?
     };
 
-    // Deterministic ordering
     diagnostics.sort_by(|a, b| {
         a.sort_key()
             .0

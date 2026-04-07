@@ -19,8 +19,6 @@ impl Diagnostic {
     }
 }
 
-/// Filter `comments` through the allowlist and wrap the remaining ones as
-/// `Diagnostic` values attributed to `file_path`.
 pub fn check_comments(
     file_path: &str,
     comments: Vec<Comment>,
@@ -36,8 +34,7 @@ pub fn check_comments(
         .collect()
 }
 
-/// Retain only diagnostics whose `start_line` falls within any of the given
-/// line ranges (1-based, inclusive start, exclusive end — same as `Range<usize>`).
+/// Retain only diagnostics whose `start_line` falls within any of `ranges` (1-based, exclusive end).
 pub fn filter_by_ranges(diagnostics: Vec<Diagnostic>, ranges: &[Range<usize>]) -> Vec<Diagnostic> {
     diagnostics
         .into_iter()

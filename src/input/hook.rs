@@ -36,10 +36,7 @@ pub struct HookTarget {
 const LINE_BUFFER: usize = 3;
 
 /// Parse a Claude Code hook JSON payload and produce a `HookTarget`.
-///
-/// Returns `Err(String)` for unrecognized / invalid JSON.
-/// On known tool types with parseable input the changed ranges are computed
-/// from the diff information embedded in the payload.
+/// Returns `Err` for invalid JSON; for unknown tool types checks the whole file.
 pub fn parse_hook_input(json: &str) -> Result<HookTarget, String> {
     let payload: HookPayload =
         serde_json::from_str(json).map_err(|e| format!("invalid hook JSON: {e}"))?;
@@ -48,10 +45,8 @@ pub fn parse_hook_input(json: &str) -> Result<HookTarget, String> {
     let tool_name = payload.tool_name.as_str();
 
     let changed_ranges = match tool_name {
-        // Write / Create: no diff info — check the whole file
         "Write" | "Create" => None,
 
-        // Edit: single old/new pair — find where the new_string landed
         "Edit" => {
             let new_string = payload.tool_input.new_string.as_deref().unwrap_or("");
             if new_string.is_empty() {
@@ -62,7 +57,6 @@ pub fn parse_hook_input(json: &str) -> Result<HookTarget, String> {
             }
         }
 
-        // MultiEdit: multiple edit entries
         "MultiEdit" => {
             let edits = payload.tool_input.edits.as_deref().unwrap_or(&[]);
             let new_strings: Vec<&str> = edits
@@ -79,7 +73,6 @@ pub fn parse_hook_input(json: &str) -> Result<HookTarget, String> {
             }
         }
 
-        // Unknown tool — check the whole file
         _ => None,
     };
 
@@ -105,10 +98,9 @@ pub fn find_changed_ranges(
     let mut ranges: Vec<Range<usize>> = Vec::new();
 
     for needle in new_strings {
-        // Find the position of needle in the file content
         if let Some(byte_pos) = file_content.find(needle) {
             let before = &file_content[..byte_pos];
-            let start_line = before.lines().count() + 1; // 1-based
+            let start_line = before.lines().count() + 1;
             let needle_lines = needle.lines().count().max(1);
             let end_line = start_line + needle_lines - 1;
 
@@ -139,7 +131,6 @@ pub fn merge_ranges(mut ranges: Vec<Range<usize>>) -> Vec<Range<usize>> {
 
     for r in ranges.into_iter().skip(1) {
         if r.start <= current.end {
-            // Overlapping or adjacent — extend current
             current.end = current.end.max(r.end);
         } else {
             merged.push(current);
