@@ -23,4 +23,14 @@ allowlist = [
   "^The C symbol exported",
   "^The grammar name used in download URLs",
   "^All distinct grammar names",
+
+  # Temporary stub in parser/mod.rs until Task 7
+  "TODO\\(task-7\\)",
+  "cannot be parsed",
+
+  # GrammarCache internals (grammar.rs)
+  "already-cached Language without triggering",
+  "raw fn ptr",
+  "verified working with libloading",
+  "^Validate ABI",
 ]

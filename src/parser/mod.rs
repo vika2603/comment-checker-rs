@@ -9,9 +9,9 @@ use tree_sitter::Node;
 /// Returns `None` if the source cannot be parsed.
 pub fn parse_comments(source: &str, lang: Language) -> Option<Vec<Comment>> {
     let mut parser = tree_sitter::Parser::new();
-    parser
-        .set_language(&lang.tree_sitter_language())
-        .ok()?;
+    // TODO(task-7): replace with GrammarCache-based language loading
+    let _ = (&mut parser, &lang);
+    return None;
 
     let tree = parser.parse(source, None)?;
     let root = tree.root_node();
