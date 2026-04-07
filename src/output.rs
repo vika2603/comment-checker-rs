@@ -55,7 +55,7 @@ pub fn format_jsonl(diagnostics: &[Diagnostic]) -> String {
             end_line: d.comment.span.end_line,
             end_column: d.comment.span.end_col,
             kind: &kind_str,
-            text: d.comment.content.clone(),
+            text: d.comment.raw_text(),
             severity: "warning",
         };
         if let Ok(json) = serde_json::to_string(&record) {
@@ -69,23 +69,27 @@ pub fn format_jsonl(diagnostics: &[Diagnostic]) -> String {
 const DEFAULT_TEMPLATE: &str = r#"<comment-checker>
 <summary>Found {{count}} flagged comment(s) that may need attention.</summary>
 <flagged-comments>{{comments}}</flagged-comments>
-<instruction>Review each flagged comment and determine whether it should be removed, reworded, or explicitly allowed.</instruction>
+<instruction>Review each flagged comment. If the comment is outdated, inaccurate, or unnecessary, remove or update it. If the comment is valid and intentional, add a pattern to the allowlist in .comment-checker.toml to suppress this warning.</instruction>
 </comment-checker>"#;
 
 /// Prompt format: XML block suitable for injecting into an LLM prompt.
 /// `template` may contain `{{comments}}` and `{{count}}` placeholders.
 pub fn format_prompt(diagnostics: &[Diagnostic], template: Option<&str>) -> String {
+    if diagnostics.is_empty() {
+        return String::new();
+    }
     let tmpl = template.unwrap_or(DEFAULT_TEMPLATE);
 
     let mut comments_block = String::new();
     for d in diagnostics {
         let raw = d
             .comment
-            .content
+            .raw_text()
             .lines()
             .next()
             .unwrap_or("")
-            .trim_end();
+            .trim_end()
+            .to_string();
         comments_block.push_str(&format!(
             "<comment file=\"{}\" line=\"{}\" type=\"{}\">{}</comment>\n",
             d.file,

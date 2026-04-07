@@ -36,12 +36,16 @@ impl Comment {
     }
 
     pub fn raw_text(&self) -> String {
-        format!(
-            "{}{}{}",
-            self.prefix,
-            if self.content.is_empty() { "" } else { " " },
-            self.content
-        )
+        if self.prefix.is_empty() {
+            self.content.clone()
+        } else {
+            format!(
+                "{}{}{}",
+                self.prefix,
+                if self.content.is_empty() { "" } else { " " },
+                self.content
+            )
+        }
     }
 }
 

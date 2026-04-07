@@ -1,6 +1,7 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
 use std::path::PathBuf;
+use std::io::Write;
 
 fn bin() -> Command {
     Command::cargo_bin("comment-checker").expect("binary must build")
@@ -180,6 +181,86 @@ fn test_hook_quiet_exits_1_empty_stdout() {
         .write_stdin(json)
         .assert()
         .code(1)
+        .stdout(predicate::str::is_empty());
+}
+
+// ---------------------------------------------------------------------------
+// Config file loading
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_config_allowlist_suppresses_matching_comments() {
+    // Create a temp dir with a source file and a config that allowlists
+    // the pattern matching comments in that file.
+    let tmp = tempfile::tempdir().expect("temp dir must be created");
+
+    // Write a Rust source file with one comment that would normally be flagged
+    let src_path = tmp.path().join("sample.rs");
+    std::fs::write(
+        &src_path,
+        "// TODO: fix this later\n// ALLOWED-COMMENT: should be suppressed\n",
+    )
+    .expect("write source file");
+
+    // Write config that allowlists "ALLOWED-COMMENT"
+    let config_path = tmp.path().join(".comment-checker.toml");
+    let mut config_file = std::fs::File::create(&config_path).expect("create config file");
+    writeln!(config_file, r#"allowlist = ["ALLOWED-COMMENT"]"#)
+        .expect("write config file");
+
+    // Running without config: both comments flagged (exit 1)
+    bin()
+        .arg("--format")
+        .arg("jsonl")
+        .arg(&src_path)
+        .assert()
+        .code(1)
+        .stdout(predicate::str::contains("ALLOWED-COMMENT"));
+
+    // Running with config: ALLOWED-COMMENT suppressed, only TODO flagged
+    let out = bin()
+        .arg("--config")
+        .arg(&config_path)
+        .arg("--format")
+        .arg("jsonl")
+        .arg(&src_path)
+        .assert()
+        .code(1)
+        .get_output()
+        .stdout
+        .clone();
+
+    let stdout = String::from_utf8_lossy(&out);
+    assert!(
+        stdout.contains("TODO"),
+        "TODO comment should still be flagged, got: {stdout}"
+    );
+    assert!(
+        !stdout.contains("ALLOWED-COMMENT"),
+        "ALLOWED-COMMENT should be suppressed by allowlist, got: {stdout}"
+    );
+}
+
+#[test]
+fn test_config_allowlist_full_suppression_exits_0() {
+    let tmp = tempfile::tempdir().expect("temp dir must be created");
+
+    let src_path = tmp.path().join("clean.rs");
+    std::fs::write(&src_path, "// SUPPRESSED: everything here\n")
+        .expect("write source file");
+
+    let config_path = tmp.path().join(".comment-checker.toml");
+    let mut config_file = std::fs::File::create(&config_path).expect("create config file");
+    writeln!(config_file, r#"allowlist = ["SUPPRESSED"]"#)
+        .expect("write config file");
+
+    // With config, the single comment is suppressed -> exit 0
+    bin()
+        .arg("--config")
+        .arg(&config_path)
+        .arg(&src_path)
+        .assert()
+        .code(0)
         .stdout(predicate::str::is_empty());
 }
 

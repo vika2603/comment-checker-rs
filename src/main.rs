@@ -141,7 +141,16 @@ fn run_hook_mode(args: &Cli, allowlist: &Allowlist) -> Result<Vec<Diagnostic>> {
         }
     };
 
-    let comments = parse_comments(&source, language).unwrap_or_default();
+    let comments = match parse_comments(&source, language) {
+        Some(c) => c,
+        None => {
+            eprintln!(
+                "warning: tree-sitter parse failed for {}, skipping",
+                target.file_path.display()
+            );
+            return Ok(Vec::new());
+        }
+    };
     let file_str = target.file_path.to_string_lossy().into_owned();
     let mut diagnostics = check_comments(&file_str, comments, allowlist);
 
@@ -181,7 +190,15 @@ fn run_cli_mode(
                 }
             };
 
-            let comments = parse_comments(&source, df.language).unwrap_or_default();
+            let comments = match parse_comments(&source, df.language) {
+                Some(c) => c,
+                None => {
+                    eprintln!(
+                        "warning: tree-sitter parse failed for {path_str}, skipping"
+                    );
+                    return Vec::new();
+                }
+            };
             check_comments(&path_str, comments, allowlist)
         })
         .collect();
