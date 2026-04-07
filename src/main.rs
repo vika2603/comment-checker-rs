@@ -27,7 +27,13 @@ fn main() -> ExitCode {
 
     if args.hook {
         match run(&args) {
-            Ok(_) => ExitCode::SUCCESS,
+            Ok(has_diagnostics) => {
+                if has_diagnostics {
+                    ExitCode::from(2)
+                } else {
+                    ExitCode::SUCCESS
+                }
+            }
             Err(e) => {
                 eprintln!("comment-checker hook error: {e}");
                 ExitCode::SUCCESS
@@ -81,7 +87,11 @@ fn run(args: &Cli) -> Result<bool> {
             }
         };
         if !output.is_empty() {
-            print!("{output}");
+            if args.hook {
+                eprint!("{output}");
+            } else {
+                print!("{output}");
+            }
         }
     }
 
