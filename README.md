@@ -39,7 +39,43 @@ In hook mode, only comments within the changed region are flagged (not the entir
 
 ## Supported Languages
 
-Rust, Go, TypeScript, JavaScript (JSX/TSX), Python, Java, C, C++, Ruby, Shell/Bash
+| Language | Extensions |
+|----------|------------|
+| Rust | `.rs` |
+| Python | `.py`, `.pyi` |
+| JavaScript | `.js`, `.mjs`, `.cjs` |
+| JSX | `.jsx` |
+| TypeScript | `.ts`, `.mts`, `.cts` |
+| TSX | `.tsx` |
+| Go | `.go` |
+| Java | `.java` |
+| C | `.c`, `.h` |
+| C++ | `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hxx` |
+| Ruby | `.rb` |
+| Shell/Bash | `.sh`, `.bash`, `.zsh` |
+| Kotlin | `.kt`, `.kts` |
+| Swift | `.swift` |
+| C# | `.cs` |
+| Scala | `.scala`, `.sc` |
+| PHP | `.php`, `.phtml` |
+| Lua | `.lua` |
+| Elixir | `.ex`, `.exs` |
+| Haskell | `.hs` |
+| OCaml | `.ml`, `.mli` |
+| Zig | `.zig` |
+| Dart | `.dart` |
+| R | `.r`, `.R` |
+| Perl | `.pl`, `.pm` |
+| TOML | `.toml` |
+| YAML | `.yml`, `.yaml` |
+| HTML | `.html`, `.htm` |
+| CSS | `.css` |
+| SQL | `.sql` |
+| HCL/Terraform | `.tf`, `.hcl` |
+| Nix | `.nix` |
+| Clojure | `.clj`, `.cljs`, `.cljc` |
+| Erlang | `.erl`, `.hrl` |
+| Objective-C | `.m` |
 
 ## Usage
 

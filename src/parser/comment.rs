@@ -53,17 +53,20 @@ fn strip_comment(raw: &str, kind: CommentKind) -> (&str, String) {
     let trimmed = raw.trim();
     let prefixes: &[&str] = match kind {
         CommentKind::Doc => &["///", "//!", "/**", "/*!", "\"\"\"", "'''"],
-        CommentKind::Line => &["//", "#", "--"],
-        CommentKind::Block => &["/*"],
+        CommentKind::Line => &["//", "#", "--", ";", "%"],
+        CommentKind::Block => &["<!--", "(*", "{-", "/*"],
     };
     for prefix in prefixes {
         if let Some(after) = trimmed.strip_prefix(prefix) {
             let is_block_style = kind == CommentKind::Block
                 || (kind == CommentKind::Doc && (*prefix == "/**" || *prefix == "/*!"));
             let after = if is_block_style {
-                after
-                    .trim_end()
-                    .strip_suffix("*/")
+                let trimmed_end = after.trim_end();
+                trimmed_end
+                    .strip_suffix("-->")
+                    .or_else(|| trimmed_end.strip_suffix("*)"))
+                    .or_else(|| trimmed_end.strip_suffix("-}"))
+                    .or_else(|| trimmed_end.strip_suffix("*/"))
                     .unwrap_or(after)
             } else {
                 after
