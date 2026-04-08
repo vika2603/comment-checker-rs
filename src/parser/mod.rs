@@ -23,12 +23,7 @@ pub fn parse_comments(
     Some(comments)
 }
 
-fn walk_for_comments<'a>(
-    node: Node<'a>,
-    source: &str,
-    lang: Language,
-    out: &mut Vec<Comment>,
-) {
+fn walk_for_comments<'a>(node: Node<'a>, source: &str, lang: Language, out: &mut Vec<Comment>) {
     let type_name = node.kind();
 
     // All tree-sitter grammars name comment nodes with "comment" in the type.
@@ -109,9 +104,7 @@ fn classify_comment(raw: &str, type_name: &str) -> CommentKind {
         return CommentKind::Doc;
     }
 
-    if type_name.contains("block")
-        || (type_name == "comment" && trimmed.starts_with("/*"))
-    {
+    if type_name.contains("block") || (type_name == "comment" && trimmed.starts_with("/*")) {
         return CommentKind::Block;
     }
 

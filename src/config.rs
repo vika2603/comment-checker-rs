@@ -101,6 +101,8 @@ fn xdg_config_dir() -> Option<PathBuf> {
     if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
         Some(PathBuf::from(xdg))
     } else {
-        std::env::var("HOME").ok().map(|h| PathBuf::from(h).join(".config"))
+        std::env::var("HOME")
+            .ok()
+            .map(|h| PathBuf::from(h).join(".config"))
     }
 }

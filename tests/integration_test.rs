@@ -45,10 +45,7 @@ fn test_hook_write_tool_exits_2_with_stderr_output() {
 
 #[test]
 fn test_hook_invalid_json_exits_0() {
-    bin()
-        .write_stdin("{not valid json}")
-        .assert()
-        .code(0);
+    bin().write_stdin("{not valid json}").assert().code(0);
 }
 
 #[test]
@@ -62,18 +59,12 @@ fn test_hook_unsupported_language_exits_0() {
     })
     .to_string();
 
-    bin()
-        .write_stdin(json)
-        .assert()
-        .code(0);
+    bin().write_stdin(json).assert().code(0);
 }
 
 #[test]
 fn test_hook_empty_stdin_exits_0() {
-    bin()
-        .write_stdin("")
-        .assert()
-        .code(0);
+    bin().write_stdin("").assert().code(0);
 }
 
 #[test]
@@ -93,11 +84,7 @@ fn test_hook_quiet_exits_2_empty_stderr() {
     let path = fixture_str("rust.rs");
     let json = hook_json_write(&path);
 
-    bin()
-        .arg("--quiet")
-        .write_stdin(json)
-        .assert()
-        .code(2);
+    bin().arg("--quiet").write_stdin(json).assert().code(2);
 }
 
 #[test]
@@ -115,7 +102,11 @@ fn test_config_allowlist_suppresses_via_hook() {
     let mut config_file = std::fs::File::create(&config_path).expect("create config file");
     writeln!(config_file, r#"allowlist = ["ALLOWED-COMMENT"]"#).expect("write config file");
 
-    let path_str = src_path.canonicalize().unwrap().to_string_lossy().into_owned();
+    let path_str = src_path
+        .canonicalize()
+        .unwrap()
+        .to_string_lossy()
+        .into_owned();
     let json = hook_json_write(&path_str);
 
     let output = bin()
@@ -150,7 +141,11 @@ fn test_config_allowlist_full_suppression_exits_0() {
     let mut config_file = std::fs::File::create(&config_path).expect("create config file");
     writeln!(config_file, r#"allowlist = ["SUPPRESSED"]"#).expect("write config file");
 
-    let path_str = src_path.canonicalize().unwrap().to_string_lossy().into_owned();
+    let path_str = src_path
+        .canonicalize()
+        .unwrap()
+        .to_string_lossy()
+        .into_owned();
     let json = hook_json_write(&path_str);
 
     bin()
@@ -186,4 +181,28 @@ fn test_hook_edit_tool_filters_by_range() {
         .assert()
         .code(2)
         .stderr(predicate::str::contains("<comment-checker>"));
+}
+
+#[test]
+fn test_init_codex_installs_create_matcher() {
+    let tmp = tempfile::tempdir().expect("temp dir must be created");
+
+    bin()
+        .arg("init")
+        .arg("codex")
+        .env("HOME", tmp.path())
+        .assert()
+        .success();
+
+    let hooks_path = tmp.path().join(".codex").join("hooks.json");
+    let hooks = std::fs::read_to_string(&hooks_path).expect("hooks file must be created");
+
+    assert!(
+        hooks.contains("Write|Create|Edit|MultiEdit"),
+        "hook matcher should include Create, got: {hooks}"
+    );
+    assert!(
+        hooks.contains("\"command\": \"comment-checker\""),
+        "hook should invoke comment-checker, got: {hooks}"
+    );
 }

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::cli::Target;
 
 const HOOK_ENTRY: &str = r#"{
-        "matcher": "Write|Edit|MultiEdit",
+        "matcher": "Write|Create|Edit|MultiEdit",
         "hooks": [
           {
             "type": "command",
@@ -86,7 +86,8 @@ pub fn uninstall(target: &Target) -> Result<(), String> {
 }
 
 fn settings_path(target: &Target) -> Result<PathBuf, String> {
-    let home = std::env::var("HOME").map_err(|_| "HOME environment variable not set".to_string())?;
+    let home =
+        std::env::var("HOME").map_err(|_| "HOME environment variable not set".to_string())?;
     Ok(match target {
         Target::Claude => PathBuf::from(&home).join(".claude").join("settings.json"),
         Target::Codex => PathBuf::from(&home).join(".codex").join("hooks.json"),
@@ -95,14 +96,13 @@ fn settings_path(target: &Target) -> Result<PathBuf, String> {
 
 fn read_or_create(path: &PathBuf) -> Result<serde_json::Value, String> {
     if path.exists() {
-        let content =
-            std::fs::read_to_string(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+        let content = std::fs::read_to_string(path)
+            .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
         let content = content.trim();
         if content.is_empty() || content == "{}" {
             return Ok(serde_json::json!({}));
         }
-        serde_json::from_str(content)
-            .map_err(|e| format!("cannot parse {}: {e}", path.display()))
+        serde_json::from_str(content).map_err(|e| format!("cannot parse {}: {e}", path.display()))
     } else {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)
@@ -113,10 +113,9 @@ fn read_or_create(path: &PathBuf) -> Result<serde_json::Value, String> {
 }
 
 fn write_pretty(path: &PathBuf, value: &serde_json::Value) -> Result<(), String> {
-    let json = serde_json::to_string_pretty(value)
-        .map_err(|e| format!("cannot serialize JSON: {e}"))?;
-    std::fs::write(path, json + "\n")
-        .map_err(|e| format!("cannot write {}: {e}", path.display()))
+    let json =
+        serde_json::to_string_pretty(value).map_err(|e| format!("cannot serialize JSON: {e}"))?;
+    std::fs::write(path, json + "\n").map_err(|e| format!("cannot write {}: {e}", path.display()))
 }
 
 fn already_installed(arr: &[serde_json::Value]) -> bool {

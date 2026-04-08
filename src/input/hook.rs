@@ -89,16 +89,18 @@ fn read_file(path: &PathBuf) -> Result<String, String> {
 /// Find the line ranges (1-based, with `LINE_BUFFER` padding) in `file_content`
 /// where each string in `new_strings` appears.
 /// Returns `None` if no matches are found (signals "check whole file").
-pub fn find_changed_ranges(
-    file_content: &str,
-    new_strings: &[&str],
-) -> Option<Vec<Range<usize>>> {
+pub fn find_changed_ranges(file_content: &str, new_strings: &[&str]) -> Option<Vec<Range<usize>>> {
     let lines: Vec<&str> = file_content.lines().collect();
     let total_lines = lines.len();
     let mut ranges: Vec<Range<usize>> = Vec::new();
 
     for needle in new_strings {
-        let needle_line_count = needle.as_bytes().iter().filter(|&&b| b == b'\n').count().max(1);
+        let needle_line_count = needle
+            .as_bytes()
+            .iter()
+            .filter(|&&b| b == b'\n')
+            .count()
+            .max(1);
         let mut offset = 0;
         while let Some(rel_pos) = file_content[offset..].find(needle) {
             let byte_pos = offset + rel_pos;
@@ -190,7 +192,7 @@ mod tests {
 
     #[test]
     fn test_merge_ranges_single() {
-        let ranges = vec![2..7];
+        let ranges = std::iter::once(2..7).collect();
         let merged = merge_ranges(ranges);
         assert_eq!(merged, vec![2..7]);
     }
@@ -218,7 +220,10 @@ mod tests {
             }
         }"#;
         let result = parse_hook_input(json).unwrap();
-        assert_eq!(result.file_path, PathBuf::from("/tmp/nonexistent_test_file.rs"));
+        assert_eq!(
+            result.file_path,
+            PathBuf::from("/tmp/nonexistent_test_file.rs")
+        );
         assert!(result.changed_ranges.is_none());
     }
 }

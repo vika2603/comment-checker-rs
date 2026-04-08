@@ -1,3 +1,3 @@
 pub mod hook;
 
-pub use hook::{parse_hook_input, HookPayload, HookTarget, ToolInput};
+pub use hook::{HookPayload, HookTarget, ToolInput, parse_hook_input};

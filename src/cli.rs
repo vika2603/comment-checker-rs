@@ -2,7 +2,11 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
-#[command(name = "comment-checker", version, about = "Check code comments using tree-sitter AST parsing")]
+#[command(
+    name = "comment-checker",
+    version,
+    about = "Check code comments using tree-sitter AST parsing"
+)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Command>,

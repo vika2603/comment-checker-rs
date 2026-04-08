@@ -35,7 +35,7 @@ AI agent writes code
   -> AI agent sees the feedback and removes unnecessary comments
 ```
 
-In hook mode, only comments within the changed region are flagged (not the entire file). For `Write` operations the whole file is checked. For `Edit`/`MultiEdit` operations, a +/- 3 line buffer around the changed lines is checked.
+In hook mode, only comments within the changed region are flagged (not the entire file). For `Write`/`Create` operations the whole file is checked. For `Edit`/`MultiEdit` operations, a +/- 3 line buffer around the changed lines is checked.
 
 ## Supported Languages
 
@@ -92,7 +92,7 @@ comment-checker uninstall claude
 comment-checker uninstall codex
 ```
 
-This adds a PostToolUse hook that runs automatically on every Write/Edit/MultiEdit operation. When the hook finds flagged comments, it outputs an XML report to stderr and exits with code 2, which the AI agent sees as feedback.
+This adds a PostToolUse hook that runs automatically on every Write/Create/Edit/MultiEdit operation. When the hook finds flagged comments, it outputs an XML report to stderr and exits with code 2, which the AI agent sees as feedback.
 
 ### Pre-fetch Grammars
 

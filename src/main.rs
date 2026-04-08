@@ -60,7 +60,9 @@ fn run(args: &Cli) -> Result<bool> {
     let mut grammar_cache = GrammarCache::new();
 
     let mut stdin_data = String::new();
-    std::io::stdin().read_to_string(&mut stdin_data).unwrap_or(0);
+    std::io::stdin()
+        .read_to_string(&mut stdin_data)
+        .unwrap_or(0);
 
     let stdin_data = stdin_data.trim();
     if stdin_data.is_empty() {
@@ -122,7 +124,11 @@ fn run(args: &Cli) -> Result<bool> {
     let has_diagnostics = !diagnostics.is_empty();
 
     if !args.quiet {
-        let output = format_prompt(&diagnostics, args.prompt.as_deref(), config.instruction.as_deref());
+        let output = format_prompt(
+            &diagnostics,
+            args.prompt.as_deref(),
+            config.instruction.as_deref(),
+        );
         if !output.is_empty() {
             eprint!("{output}");
         }

@@ -34,13 +34,17 @@ pub fn check_comments(
         .collect()
 }
 
-/// Retain only diagnostics whose `start_line` falls within any of `ranges` (1-based, exclusive end).
+/// Retain only diagnostics whose span overlaps any of `ranges`
+/// (1-based, exclusive end).
 pub fn filter_by_ranges(diagnostics: Vec<Diagnostic>, ranges: &[Range<usize>]) -> Vec<Diagnostic> {
     diagnostics
         .into_iter()
         .filter(|d| {
-            let line = d.comment.span.start_line;
-            ranges.iter().any(|r| r.contains(&line))
+            let start_line = d.comment.span.start_line;
+            let end_line = d.comment.span.end_line;
+            ranges
+                .iter()
+                .any(|r| start_line < r.end && end_line >= r.start)
         })
         .collect()
 }
@@ -59,6 +63,20 @@ mod tests {
                 start_line: line,
                 start_col: 0,
                 end_line: line,
+                end_col: content.len(),
+            },
+        }
+    }
+
+    fn make_multiline_comment(content: &str, start_line: usize, end_line: usize) -> Comment {
+        Comment {
+            kind: CommentKind::Block,
+            prefix: "/*".to_string(),
+            content: content.to_string(),
+            span: Span {
+                start_line,
+                start_col: 0,
+                end_line,
                 end_col: content.len(),
             },
         }
@@ -87,9 +105,22 @@ mod tests {
             make_comment("comment at line 10", 10),
         ];
         let diags = check_comments("test.rs", comments, &al);
-        let filtered = filter_by_ranges(diags, &[2..7]);
+        let range = 2..7;
+        let filtered = filter_by_ranges(diags, std::slice::from_ref(&range));
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].comment.span.start_line, 5);
+    }
+
+    #[test]
+    fn test_filter_by_ranges_keeps_multiline_overlap() {
+        let al = Allowlist::new(&[]).expect("builtin patterns valid");
+        let comments = vec![make_multiline_comment("block comment", 2, 4)];
+        let diags = check_comments("test.rs", comments, &al);
+        let range = 4..8;
+        let filtered = filter_by_ranges(diags, std::slice::from_ref(&range));
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].comment.span.start_line, 2);
+        assert_eq!(filtered[0].comment.span.end_line, 4);
     }
 
     #[test]

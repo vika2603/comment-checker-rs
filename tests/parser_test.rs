@@ -1,5 +1,5 @@
-use comment_checker::parser::{parse_comments, comment::CommentKind, languages::Language};
 use comment_checker::allowlist::Allowlist;
+use comment_checker::parser::{comment::CommentKind, languages::Language, parse_comments};
 
 const RUST_FIXTURE: &str = include_str!("fixtures/rust.rs");
 
@@ -26,8 +26,8 @@ fn test_parse_rust_fixture_finds_comments() {
 #[test]
 fn test_parse_rust_fixture_no_false_positives() {
     let ts_lang = load_ts_language(Language::Rust).expect("rust parser required for tests");
-    let comments = parse_comments(RUST_FIXTURE, Language::Rust, &ts_lang)
-        .expect("parse should succeed");
+    let comments =
+        parse_comments(RUST_FIXTURE, Language::Rust, &ts_lang).expect("parse should succeed");
 
     // String literals inside source code must not be returned as comments
     for c in &comments {
@@ -47,8 +47,8 @@ fn test_parse_rust_fixture_no_false_positives() {
 #[test]
 fn test_parse_rust_fixture_comment_kinds() {
     let ts_lang = load_ts_language(Language::Rust).expect("rust parser required for tests");
-    let comments = parse_comments(RUST_FIXTURE, Language::Rust, &ts_lang)
-        .expect("parse should succeed");
+    let comments =
+        parse_comments(RUST_FIXTURE, Language::Rust, &ts_lang).expect("parse should succeed");
 
     let has_line = comments.iter().any(|c| c.kind == CommentKind::Line);
     let has_doc = comments.iter().any(|c| c.kind == CommentKind::Doc);
@@ -62,16 +62,13 @@ fn test_parse_rust_fixture_comment_kinds() {
 #[test]
 fn test_allowlist_against_rust_fixture() {
     let ts_lang = load_ts_language(Language::Rust).expect("rust parser required for tests");
-    let comments = parse_comments(RUST_FIXTURE, Language::Rust, &ts_lang)
-        .expect("parse should succeed");
+    let comments =
+        parse_comments(RUST_FIXTURE, Language::Rust, &ts_lang).expect("parse should succeed");
 
     let al = Allowlist::new(&[]).expect("builtin patterns valid");
 
     // Comments that should be allowed
-    let allowed: Vec<_> = comments
-        .iter()
-        .filter(|c| al.is_allowed(c))
-        .collect();
+    let allowed: Vec<_> = comments.iter().filter(|c| al.is_allowed(c)).collect();
 
     // The fixture has 6 explicitly-allowed comments (eslint, noqa, SPDX, Copyright, #region, #endregion)
     assert!(
@@ -88,8 +85,6 @@ fn test_allowlist_against_rust_fixture() {
     assert!(!regular_allowed, "'regular comment' should not be allowed");
 
     // Ensure "TODO: fix this" is not in the allowed list
-    let todo_allowed = allowed
-        .iter()
-        .any(|c| c.content.contains("TODO"));
+    let todo_allowed = allowed.iter().any(|c| c.content.contains("TODO"));
     assert!(!todo_allowed, "TODO comment should not be allowed");
 }

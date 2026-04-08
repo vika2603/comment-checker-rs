@@ -1,17 +1,11 @@
-use minijinja::{context, Environment};
+use minijinja::{Environment, context};
 use serde::Serialize;
 
 use crate::checker::Diagnostic;
 pub fn format_text(diagnostics: &[Diagnostic]) -> String {
     let mut out = String::new();
     for d in diagnostics {
-        let first_line = d
-            .comment
-            .content
-            .lines()
-            .next()
-            .unwrap_or("")
-            .trim_end();
+        let first_line = d.comment.content.lines().next().unwrap_or("").trim_end();
         let raw_first = format!(
             "{}{}{}",
             d.comment.prefix,
@@ -20,10 +14,7 @@ pub fn format_text(diagnostics: &[Diagnostic]) -> String {
         );
         out.push_str(&format!(
             "{}:{}:{}: warning[comment]: {}\n",
-            d.file,
-            d.comment.span.start_line,
-            d.comment.span.start_col,
-            raw_first,
+            d.file, d.comment.span.start_line, d.comment.span.start_col, raw_first,
         ));
     }
     out
@@ -87,38 +78,55 @@ struct PromptGroup {
     line: String,
     kind: String,
     text: String,
+    #[serde(skip_serializing)]
+    start_line: usize,
+    #[serde(skip_serializing)]
+    end_line: usize,
+}
+
+fn format_line_range(start_line: usize, end_line: usize) -> String {
+    if start_line == end_line {
+        start_line.to_string()
+    } else {
+        format!("{start_line}-{end_line}")
+    }
 }
 
 fn group_diagnostics(diagnostics: &[Diagnostic]) -> Vec<PromptGroup> {
     let mut groups: Vec<PromptGroup> = Vec::new();
 
     for d in diagnostics {
-        let text = d.comment.raw_text().lines().next().unwrap_or("").trim_end().to_string();
+        let text = d
+            .comment
+            .raw_text()
+            .lines()
+            .next()
+            .unwrap_or("")
+            .trim_end()
+            .to_string();
         let kind = d.comment.kind.to_string();
+        let start_line = d.comment.span.start_line;
+        let end_line = d.comment.span.end_line;
 
-        if let Some(last) = groups.last_mut() {
-            if last.file == d.file && last.kind == kind {
-                let prev_end: usize = last.line.split('-').last()
-                    .and_then(|s| s.parse().ok())
-                    .unwrap_or(0);
-                if d.comment.span.start_line <= prev_end + 2 {
-                    last.line = format!(
-                        "{}-{}",
-                        last.line.split('-').next().unwrap(),
-                        d.comment.span.start_line
-                    );
-                    last.text.push('\n');
-                    last.text.push_str(&text);
-                    continue;
-                }
-            }
+        if let Some(last) = groups.last_mut()
+            && last.file == d.file
+            && last.kind == kind
+            && start_line <= last.end_line + 2
+        {
+            last.end_line = last.end_line.max(end_line);
+            last.line = format_line_range(last.start_line, last.end_line);
+            last.text.push('\n');
+            last.text.push_str(&text);
+            continue;
         }
 
         groups.push(PromptGroup {
             file: d.file.clone(),
-            line: d.comment.span.start_line.to_string(),
+            line: format_line_range(start_line, end_line),
             kind,
             text,
+            start_line,
+            end_line,
         });
     }
 
@@ -162,6 +170,15 @@ mod tests {
     use crate::parser::comment::{Comment, CommentKind, Span};
 
     fn make_diag(file: &str, content: &str, line: usize) -> Diagnostic {
+        make_diag_with_span(file, content, line, line)
+    }
+
+    fn make_diag_with_span(
+        file: &str,
+        content: &str,
+        start_line: usize,
+        end_line: usize,
+    ) -> Diagnostic {
         Diagnostic {
             file: file.to_string(),
             comment: Comment {
@@ -169,9 +186,9 @@ mod tests {
                 prefix: "//".to_string(),
                 content: content.to_string(),
                 span: Span {
-                    start_line: line,
+                    start_line,
                     start_col: 0,
-                    end_line: line,
+                    end_line,
                     end_col: content.len(),
                 },
             },
@@ -218,10 +235,7 @@ mod tests {
 
     #[test]
     fn test_format_prompt_splits_non_consecutive() {
-        let diags = vec![
-            make_diag("a.rs", "top", 1),
-            make_diag("a.rs", "bottom", 10),
-        ];
+        let diags = vec![make_diag("a.rs", "top", 1), make_diag("a.rs", "bottom", 10)];
         let out = format_prompt(&diags, None, None);
         assert!(out.contains("in 2 group(s)"));
         assert!(out.contains("line=\"1\""));
@@ -238,5 +252,16 @@ mod tests {
         );
         assert!(out.starts_with("COUNT=1"));
         assert!(out.contains("COMMENTS=// x"));
+    }
+
+    #[test]
+    fn test_format_prompt_merges_based_on_multiline_end() {
+        let diags = vec![
+            make_diag_with_span("a.rs", "block", 1, 3),
+            make_diag_with_span("a.rs", "next", 4, 4),
+        ];
+        let out = format_prompt(&diags, None, None);
+        assert!(out.contains("2 flagged comment(s) in 1 group(s)"));
+        assert!(out.contains("line=\"1-4\""));
     }
 }

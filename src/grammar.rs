@@ -7,8 +7,7 @@ use libloading::{Library, Symbol};
 
 use crate::parser::languages::Language;
 
-const DOWNLOAD_BASE_URL: &str =
-    "https://github.com/vika2603/comment-checker-rs/releases/download";
+const DOWNLOAD_BASE_URL: &str = "https://github.com/vika2603/comment-checker-rs/releases/download";
 const PARSERS_VERSION: &str = "parsers";
 
 pub struct GrammarCache {
@@ -110,14 +109,18 @@ impl GrammarCache {
             "grammar '{}' not available (searched {} dirs, download {})",
             lang.grammar_name(),
             search_dirs.len(),
-            if parser_config.auto_download { "attempted" } else { "disabled" }
+            if parser_config.auto_download {
+                "attempted"
+            } else {
+                "disabled"
+            }
         ))
     }
 }
 
 fn load_grammar_from_path(path: &Path, lang: Language) -> Result<LoadedGrammar, String> {
-    let lib = unsafe { Library::new(path) }
-        .map_err(|e| format!("dlopen {}: {}", path.display(), e))?;
+    let lib =
+        unsafe { Library::new(path) }.map_err(|e| format!("dlopen {}: {}", path.display(), e))?;
 
     let ts_lang = unsafe {
         let func: Symbol<unsafe extern "C" fn() -> *const c_void> = lib
@@ -125,9 +128,10 @@ fn load_grammar_from_path(path: &Path, lang: Language) -> Result<LoadedGrammar, 
             .map_err(|e| format!("symbol lookup in {}: {}", path.display(), e))?;
         // Convert Symbol -> raw fn ptr -> LanguageFn -> Language
         // This pattern is verified working with libloading 0.8 + tree-sitter-language 0.1
-        let lang_fn = tree_sitter_language::LanguageFn::from_raw(
-            std::mem::transmute(func.into_raw().into_raw()),
+        let raw_fn = std::mem::transmute::<*mut c_void, unsafe extern "C" fn() -> *const ()>(
+            func.into_raw().into_raw(),
         );
+        let lang_fn = tree_sitter_language::LanguageFn::from_raw(raw_fn);
         let language: tree_sitter::Language = lang_fn.into();
         language
     };
@@ -161,11 +165,7 @@ fn download_url(grammar_name: &str) -> Result<String, String> {
     ))
 }
 
-
-pub fn download_grammar(
-    grammar_name: &str,
-    cache_dir: &Path,
-) -> Result<PathBuf, String> {
+pub fn download_grammar(grammar_name: &str, cache_dir: &Path) -> Result<PathBuf, String> {
     std::fs::create_dir_all(cache_dir)
         .map_err(|e| format!("cannot create cache dir {}: {e}", cache_dir.display()))?;
 
@@ -178,7 +178,8 @@ pub fn download_grammar(
             "--silent",
             "--fail",
             "--show-error",
-            "--retry", "3",
+            "--retry",
+            "3",
             "-L",
             &url,
             "--output",
@@ -201,8 +202,13 @@ pub fn download_grammar(
             .map_err(|e| format!("chmod {}: {e}", tmp_path.display()))?;
     }
 
-    std::fs::rename(&tmp_path, &final_path)
-        .map_err(|e| format!("rename {} -> {}: {e}", tmp_path.display(), final_path.display()))?;
+    std::fs::rename(&tmp_path, &final_path).map_err(|e| {
+        format!(
+            "rename {} -> {}: {e}",
+            tmp_path.display(),
+            final_path.display()
+        )
+    })?;
 
     Ok(final_path)
 }
@@ -215,6 +221,12 @@ pub fn grammar_cache_dir() -> Option<PathBuf> {
         PathBuf::from(home).join(".cache")
     };
     Some(base.join("comment-checker/parsers"))
+}
+
+impl Default for GrammarCache {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[cfg(test)]
@@ -245,7 +257,7 @@ mod tests {
         if !cache_dir.join("rust.so").exists() {
             return;
         }
-        let mut cache = GrammarCache::new();
+        let mut cache = GrammarCache::default();
         let dirs = vec![cache_dir];
         let lang1 = cache.get(Language::Rust, &dirs).unwrap();
         let lang2 = cache.get(Language::Rust, &dirs).unwrap();
@@ -262,8 +274,14 @@ mod tests {
 
     #[test]
     fn test_jsx_reuses_javascript() {
-        assert_eq!(Language::Jsx.so_file_name(), Language::JavaScript.so_file_name());
-        assert_eq!(Language::Jsx.symbol_name(), Language::JavaScript.symbol_name());
+        assert_eq!(
+            Language::Jsx.so_file_name(),
+            Language::JavaScript.so_file_name()
+        );
+        assert_eq!(
+            Language::Jsx.symbol_name(),
+            Language::JavaScript.symbol_name()
+        );
     }
 
     #[test]
@@ -295,8 +313,13 @@ mod tests {
     fn test_platform_suffix() {
         let suffix = platform_suffix().unwrap();
         assert!(
-            ["darwin-arm64", "darwin-x86_64", "linux-x86_64", "linux-aarch64"]
-                .contains(&suffix)
+            [
+                "darwin-arm64",
+                "darwin-x86_64",
+                "linux-x86_64",
+                "linux-aarch64"
+            ]
+            .contains(&suffix)
         );
     }
 }
