@@ -58,19 +58,28 @@ echo "$GRAMMARS" | while read -r lang repo tag subdir; do
     (cd "$tmpdir" && npx tree-sitter-cli generate)
   fi
 
-  sources="$srcdir/parser.c"
-  compiler="cc"
-  [ -f "$srcdir/scanner.c" ] && sources="$sources $srcdir/scanner.c"
-  if [ -f "$srcdir/scanner.cc" ]; then
-    sources="$sources $srcdir/scanner.cc"
-    compiler="c++"
+  objects=""
+  # shellcheck disable=SC2086
+  cc -c -fPIC -O2 $CC_FLAGS -I "$srcdir" "$srcdir/parser.c" -o "$srcdir/parser.o"
+  objects="$srcdir/parser.o"
+
+  if [ -f "$srcdir/scanner.c" ]; then
+    # shellcheck disable=SC2086
+    cc -c -fPIC -O2 $CC_FLAGS -I "$srcdir" "$srcdir/scanner.c" -o "$srcdir/scanner.o"
+    objects="$objects $srcdir/scanner.o"
   fi
 
+  if [ -f "$srcdir/scanner.cc" ]; then
+    # shellcheck disable=SC2086
+    c++ -c -fPIC -O2 $CC_FLAGS -I "$srcdir" "$srcdir/scanner.cc" -o "$srcdir/scanner_cc.o"
+    objects="$objects $srcdir/scanner_cc.o"
+  fi
+
+  link_flags=""
+  [ -f "$srcdir/scanner.cc" ] && link_flags="-lstdc++"
+
   # shellcheck disable=SC2086
-  $compiler -shared -fPIC -O2 $CC_FLAGS \
-    -I "$srcdir" \
-    $sources \
-    -o "$outfile"
+  cc -shared $CC_FLAGS $objects -o "$outfile" $link_flags
 
   chmod 755 "$outfile"
   rm -rf "$tmpdir"
