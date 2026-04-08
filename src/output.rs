@@ -67,19 +67,57 @@ pub fn format_jsonl(diagnostics: &[Diagnostic]) -> String {
 const DEFAULT_INSTRUCTION: &str = "Review each flagged comment. If the comment is outdated, inaccurate, or unnecessary, remove or update it. If the comment is valid and intentional, add a pattern to the allowlist in .comment-checker.toml to suppress this warning.";
 
 const DEFAULT_TEMPLATE: &str = r#"<comment-checker>
-<summary>Found {{ count }} flagged comment(s) that may need attention.</summary>
+<summary>Found {{ count }} flagged comment(s) in {{ groups }} group(s).</summary>
 <flagged-comments>
-{% for c in comments %}<comment file="{{ c.file }}" line="{{ c.line }}" type="{{ c.kind }}">{{ c.text }}</comment>
+{% for g in comments %}<comment file="{{ g.file }}" line="{{ g.line }}" type="{{ g.kind }}">
+{{ g.text }}
+</comment>
 {% endfor %}</flagged-comments>
 <instruction>{{ instruction }}</instruction>
 </comment-checker>"#;
 
 #[derive(Serialize)]
-struct PromptComment {
+struct PromptGroup {
     file: String,
-    line: usize,
+    line: String,
     kind: String,
     text: String,
+}
+
+fn group_diagnostics(diagnostics: &[Diagnostic]) -> Vec<PromptGroup> {
+    let mut groups: Vec<PromptGroup> = Vec::new();
+
+    for d in diagnostics {
+        let text = d.comment.raw_text().lines().next().unwrap_or("").trim_end().to_string();
+        let kind = d.comment.kind.to_string();
+
+        if let Some(last) = groups.last_mut() {
+            if last.file == d.file && last.kind == kind {
+                let prev_end: usize = last.line.split('-').last()
+                    .and_then(|s| s.parse().ok())
+                    .unwrap_or(0);
+                if d.comment.span.start_line <= prev_end + 2 {
+                    last.line = format!(
+                        "{}-{}",
+                        last.line.split('-').next().unwrap(),
+                        d.comment.span.start_line
+                    );
+                    last.text.push('\n');
+                    last.text.push_str(&text);
+                    continue;
+                }
+            }
+        }
+
+        groups.push(PromptGroup {
+            file: d.file.clone(),
+            line: d.comment.span.start_line.to_string(),
+            kind,
+            text,
+        });
+    }
+
+    groups
 }
 
 pub fn format_prompt(
@@ -91,16 +129,7 @@ pub fn format_prompt(
         return String::new();
     }
 
-    let comments: Vec<PromptComment> = diagnostics
-        .iter()
-        .map(|d| PromptComment {
-            file: d.file.clone(),
-            line: d.comment.span.start_line,
-            kind: d.comment.kind.to_string(),
-            text: d.comment.raw_text().lines().next().unwrap_or("").trim_end().to_string(),
-        })
-        .collect();
-
+    let groups = group_diagnostics(diagnostics);
     let instruction = instruction.unwrap_or(DEFAULT_INSTRUCTION);
     let tmpl = template.unwrap_or(DEFAULT_TEMPLATE);
     let mut env = Environment::new();
@@ -113,7 +142,8 @@ pub fn format_prompt(
         .and_then(|t| {
             t.render(context! {
                 count => diagnostics.len(),
-                comments => comments,
+                groups => groups.len(),
+                comments => groups,
                 instruction => instruction,
             })
         })
@@ -166,6 +196,31 @@ mod tests {
         assert!(out.contains("<comment-checker>"));
         assert!(out.contains("Found 1 flagged comment"));
         assert!(out.contains("file=\"a.rs\""));
+    }
+
+    #[test]
+    fn test_format_prompt_merges_consecutive_lines() {
+        let diags = vec![
+            make_diag("a.rs", "first line", 1),
+            make_diag("a.rs", "second line", 2),
+            make_diag("a.rs", "third line", 3),
+        ];
+        let out = format_prompt(&diags, None, None);
+        assert!(out.contains("3 flagged comment(s) in 1 group(s)"));
+        assert!(out.contains("line=\"1-3\""));
+        assert!(out.contains("// first line\n// second line\n// third line"));
+    }
+
+    #[test]
+    fn test_format_prompt_splits_non_consecutive() {
+        let diags = vec![
+            make_diag("a.rs", "top", 1),
+            make_diag("a.rs", "bottom", 10),
+        ];
+        let out = format_prompt(&diags, None, None);
+        assert!(out.contains("in 2 group(s)"));
+        assert!(out.contains("line=\"1\""));
+        assert!(out.contains("line=\"10\""));
     }
 
     #[test]
