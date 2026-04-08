@@ -54,7 +54,6 @@ In hook mode, only comments within the changed region are flagged (not the entir
 | Ruby | `.rb` |
 | Shell/Bash | `.sh`, `.bash`, `.zsh` |
 | Kotlin | `.kt`, `.kts` |
-| Swift | `.swift` |
 | C# | `.cs` |
 | Scala | `.scala`, `.sc` |
 | PHP | `.php`, `.phtml` |
@@ -65,12 +64,10 @@ In hook mode, only comments within the changed region are flagged (not the entir
 | Zig | `.zig` |
 | Dart | `.dart` |
 | R | `.r`, `.R` |
-| Perl | `.pl`, `.pm` |
 | TOML | `.toml` |
 | YAML | `.yml`, `.yaml` |
 | HTML | `.html`, `.htm` |
 | CSS | `.css` |
-| SQL | `.sql` |
 | HCL/Terraform | `.tf`, `.hcl` |
 | Nix | `.nix` |
 | Clojure | `.clj`, `.cljs`, `.cljc` |
