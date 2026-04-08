@@ -19,6 +19,7 @@ cpp           tree-sitter/tree-sitter-cpp           v0.23.4
 ruby          tree-sitter/tree-sitter-ruby          v0.23.1
 bash          tree-sitter/tree-sitter-bash          v0.25.1
 kotlin        fwcd/tree-sitter-kotlin               0.3.8
+swift         alex-pinkus/tree-sitter-swift         0.7.1
 c-sharp       tree-sitter/tree-sitter-c-sharp       v0.23.1
 scala         tree-sitter/tree-sitter-scala         v0.23.2
 php           tree-sitter/tree-sitter-php           v0.23.11  php/src
@@ -33,6 +34,7 @@ toml          tree-sitter-grammars/tree-sitter-toml v0.7.0
 yaml          tree-sitter-grammars/tree-sitter-yaml v0.7.0
 html          tree-sitter/tree-sitter-html          v0.23.2
 css           tree-sitter/tree-sitter-css           v0.23.2
+sql           DerekStride/tree-sitter-sql           v0.3.6
 hcl           tree-sitter-grammars/tree-sitter-hcl  v1.1.0
 nix           nix-community/tree-sitter-nix         v0.3.0
 clojure       sogaiu/tree-sitter-clojure            v0.0.13
@@ -50,6 +52,11 @@ echo "$GRAMMARS" | while read -r lang repo tag subdir; do
 
   srcdir="$tmpdir/$subdir"
   outfile="$OUTDIR/tree-sitter-${lang}-${SUFFIX}.so"
+
+  if [ ! -f "$srcdir/parser.c" ]; then
+    echo "  parser.c not found, running tree-sitter generate..."
+    (cd "$tmpdir" && npx tree-sitter-cli generate)
+  fi
 
   sources="$srcdir/parser.c"
   compiler="cc"
