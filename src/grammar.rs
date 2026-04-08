@@ -66,15 +66,6 @@ impl GrammarCache {
         ))
     }
 
-    pub fn is_loaded(&self, lang: Language) -> bool {
-        self.loaded.contains_key(lang.grammar_name())
-    }
-
-    /// Return the already-cached Language without triggering a load.
-    pub fn get_cached(&self, lang: Language) -> Option<&tree_sitter::Language> {
-        self.loaded.get(lang.grammar_name()).map(|g| &g.language)
-    }
-
     /// Build the ordered list of directories to search for grammar .so files.
     pub fn build_search_dirs(parser_config: &crate::config::ParserConfig) -> Vec<PathBuf> {
         let mut dirs = Vec::new();

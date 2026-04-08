@@ -28,26 +28,39 @@ pub struct Config {
     #[serde(default)]
     pub allowlist: Vec<String>,
     #[serde(default)]
-    pub languages: Vec<String>,
+    pub instruction: Option<String>,
     #[serde(default)]
     pub parsers: ParserConfig,
 }
 
-/// Load config from the first location that exists:
-/// 1. Explicit `--config` path (error if it doesn't exist)
-/// 2. Walk up from `start_dir` looking for `.comment-checker.toml`
-/// 3. XDG_CONFIG_HOME/comment-checker/config.toml (fallback ~/.config/...)
-/// 4. Built-in defaults (empty Config)
 pub fn load_config(explicit_path: Option<&Path>, start_dir: &Path) -> Result<Config> {
+    let global = load_global_config();
+    let project = load_project_config(explicit_path, start_dir)?;
+
+    match project {
+        Some(proj) => Ok(merge(global, proj)),
+        None => Ok(global),
+    }
+}
+
+fn load_global_config() -> Config {
+    xdg_config_dir()
+        .map(|dir| dir.join("comment-checker").join("config.toml"))
+        .filter(|p| p.exists())
+        .and_then(|p| read_config(&p).ok())
+        .unwrap_or_default()
+}
+
+fn load_project_config(explicit_path: Option<&Path>, start_dir: &Path) -> Result<Option<Config>> {
     if let Some(path) = explicit_path {
-        return read_config(path);
+        return read_config(path).map(Some);
     }
 
     let mut dir = start_dir.to_path_buf();
     loop {
         let candidate = dir.join(".comment-checker.toml");
         if candidate.exists() {
-            return read_config(&candidate);
+            return read_config(&candidate).map(Some);
         }
         match dir.parent() {
             Some(parent) => dir = parent.to_path_buf(),
@@ -55,14 +68,25 @@ pub fn load_config(explicit_path: Option<&Path>, start_dir: &Path) -> Result<Con
         }
     }
 
-    if let Some(xdg_config) = xdg_config_dir() {
-        let xdg_candidate = xdg_config.join("comment-checker").join("config.toml");
-        if xdg_candidate.exists() {
-            return read_config(&xdg_candidate);
-        }
-    }
+    Ok(None)
+}
 
-    Ok(Config::default())
+fn merge(global: Config, project: Config) -> Config {
+    let mut allowlist = global.allowlist;
+    allowlist.extend(project.allowlist);
+
+    Config {
+        allowlist,
+        instruction: project.instruction.or(global.instruction),
+        parsers: if project.parsers.path.is_some() {
+            project.parsers
+        } else {
+            ParserConfig {
+                path: global.parsers.path.or(project.parsers.path),
+                auto_download: project.parsers.auto_download,
+            }
+        },
+    }
 }
 
 fn read_config(path: &Path) -> Result<Config> {

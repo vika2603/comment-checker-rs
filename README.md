@@ -121,7 +121,7 @@ languages = ["rust", "python", "typescript"]
 Customize the XML output that AI agents see:
 
 ```bash
-comment-checker --hook --prompt '<review>{{count}} comments to fix:\n{{comments}}</review>'
+comment-checker --prompt '<review>{{count}} comments to fix:\n{{comments}}</review>'
 ```
 
 Placeholders: `{{comments}}` (XML comment blocks), `{{count}}` (number of flagged comments).

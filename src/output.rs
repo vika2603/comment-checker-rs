@@ -64,12 +64,14 @@ pub fn format_jsonl(diagnostics: &[Diagnostic]) -> String {
     out
 }
 
+const DEFAULT_INSTRUCTION: &str = "Review each flagged comment. If the comment is outdated, inaccurate, or unnecessary, remove or update it. If the comment is valid and intentional, add a pattern to the allowlist in .comment-checker.toml to suppress this warning.";
+
 const DEFAULT_TEMPLATE: &str = r#"<comment-checker>
 <summary>Found {{ count }} flagged comment(s) that may need attention.</summary>
 <flagged-comments>
 {% for c in comments %}<comment file="{{ c.file }}" line="{{ c.line }}" type="{{ c.kind }}">{{ c.text }}</comment>
 {% endfor %}</flagged-comments>
-<instruction>Review each flagged comment. If the comment is outdated, inaccurate, or unnecessary, remove or update it. If the comment is valid and intentional, add a pattern to the allowlist in .comment-checker.toml to suppress this warning.</instruction>
+<instruction>{{ instruction }}</instruction>
 </comment-checker>"#;
 
 #[derive(Serialize)]
@@ -80,7 +82,11 @@ struct PromptComment {
     text: String,
 }
 
-pub fn format_prompt(diagnostics: &[Diagnostic], template: Option<&str>) -> String {
+pub fn format_prompt(
+    diagnostics: &[Diagnostic],
+    template: Option<&str>,
+    instruction: Option<&str>,
+) -> String {
     if diagnostics.is_empty() {
         return String::new();
     }
@@ -95,6 +101,7 @@ pub fn format_prompt(diagnostics: &[Diagnostic], template: Option<&str>) -> Stri
         })
         .collect();
 
+    let instruction = instruction.unwrap_or(DEFAULT_INSTRUCTION);
     let tmpl = template.unwrap_or(DEFAULT_TEMPLATE);
     let mut env = Environment::new();
     env.set_auto_escape_callback(|_| minijinja::AutoEscape::None);
@@ -103,7 +110,13 @@ pub fn format_prompt(diagnostics: &[Diagnostic], template: Option<&str>) -> Stri
     });
 
     env.get_template("prompt")
-        .and_then(|t| t.render(context! { count => diagnostics.len(), comments => comments }))
+        .and_then(|t| {
+            t.render(context! {
+                count => diagnostics.len(),
+                comments => comments,
+                instruction => instruction,
+            })
+        })
         .unwrap_or_default()
 }
 
@@ -149,7 +162,7 @@ mod tests {
     #[test]
     fn test_format_prompt_default_template() {
         let diags = vec![make_diag("a.rs", "some note", 1)];
-        let out = format_prompt(&diags, None);
+        let out = format_prompt(&diags, None, None);
         assert!(out.contains("<comment-checker>"));
         assert!(out.contains("Found 1 flagged comment"));
         assert!(out.contains("file=\"a.rs\""));
@@ -161,6 +174,7 @@ mod tests {
         let out = format_prompt(
             &diags,
             Some("COUNT={{ count }} COMMENTS={% for c in comments %}{{ c.text }}{% endfor %}"),
+            None,
         );
         assert!(out.starts_with("COUNT=1"));
         assert!(out.contains("COMMENTS=// x"));

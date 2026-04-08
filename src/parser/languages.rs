@@ -41,23 +41,6 @@ impl Language {
             .and_then(Self::from_extension)
     }
 
-    pub fn name(&self) -> &'static str {
-        match self {
-            Language::Rust => "rust",
-            Language::Python => "python",
-            Language::JavaScript => "javascript",
-            Language::Jsx => "jsx",
-            Language::TypeScript => "typescript",
-            Language::Tsx => "tsx",
-            Language::Go => "go",
-            Language::Java => "java",
-            Language::C => "c",
-            Language::Cpp => "cpp",
-            Language::Ruby => "ruby",
-            Language::Shell => "shell",
-        }
-    }
-
     /// The .so file name to look for (e.g. "rust.so").
     /// JSX reuses javascript.so. All others match their grammar name.
     pub fn so_file_name(&self) -> &'static str {

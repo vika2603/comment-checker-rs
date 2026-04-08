@@ -7,7 +7,7 @@ const HOOK_ENTRY: &str = r#"{
         "hooks": [
           {
             "type": "command",
-            "command": "comment-checker --hook"
+            "command": "comment-checker"
           }
         ]
       }"#;
