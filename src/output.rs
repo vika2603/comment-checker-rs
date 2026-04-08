@@ -64,7 +64,12 @@ pub fn format_jsonl(diagnostics: &[Diagnostic]) -> String {
     out
 }
 
-const DEFAULT_INSTRUCTION: &str = "Review each flagged comment. If the comment is outdated, inaccurate, or unnecessary, remove or update it. If the comment is valid and intentional, add a pattern to the allowlist in .comment-checker.toml to suppress this warning.";
+const DEFAULT_INSTRUCTION: &str = "\
+Remove comments that merely restate the code, describe obvious behavior, or were left by a previous edit. \
+Keep comments that explain WHY (non-obvious intent, business rules, trade-offs, workarounds), \
+mark incomplete work (TODO/FIXME with context), \
+or are required by tooling (linter directives, type annotations, license headers). \
+When in doubt, remove the comment -- the code should speak for itself.";
 
 const DEFAULT_TEMPLATE: &str = r#"<comment-checker>
 <summary>Found {{ count }} flagged comment(s) in {{ groups }} group(s).</summary>
