@@ -9,7 +9,7 @@ use crate::parser::languages::Language;
 
 const DOWNLOAD_BASE_URL: &str =
     "https://github.com/vika2603/comment-checker-rs/releases/download";
-const PARSERS_VERSION: &str = "parsers-v1";
+const PARSERS_VERSION: &str = "parsers";
 
 pub struct GrammarCache {
     loaded: HashMap<String, LoadedGrammar>,

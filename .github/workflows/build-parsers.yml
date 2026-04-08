@@ -2,11 +2,6 @@ name: Build Tree-Sitter Parsers
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Parser release version (e.g. parsers-v1)'
-        required: true
-        default: 'parsers-v1'
 
 jobs:
   build:
@@ -63,10 +58,18 @@ jobs:
           sha256sum *.so > checksums.sha256
           cat checksums.sha256
 
+      - name: Delete existing parsers release
+        run: gh release delete parsers --yes --cleanup-tag || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.version }}
+          tag_name: parsers
+          name: Tree-Sitter Parsers
+          body: "Pre-built tree-sitter grammar .so files for all supported languages."
           files: |
             all-parsers/*.so
             all-parsers/checksums.sha256
