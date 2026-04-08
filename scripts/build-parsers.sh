@@ -18,8 +18,8 @@ c             tree-sitter/tree-sitter-c             v0.24.1
 cpp           tree-sitter/tree-sitter-cpp           v0.23.4
 ruby          tree-sitter/tree-sitter-ruby          v0.23.1
 bash          tree-sitter/tree-sitter-bash          v0.25.1
-kotlin        fwcd/tree-sitter-kotlin               v0.3.8
-swift         tree-sitter-grammars/tree-sitter-swift v0.6.0
+kotlin        fwcd/tree-sitter-kotlin               0.3.8
+swift         alex-pinkus/tree-sitter-swift         0.7.1
 c-sharp       tree-sitter/tree-sitter-c-sharp       v0.23.1
 scala         tree-sitter/tree-sitter-scala         v0.23.2
 php           tree-sitter/tree-sitter-php           v0.23.11  php/src
@@ -27,19 +27,19 @@ lua           tree-sitter-grammars/tree-sitter-lua  v0.2.0
 elixir        elixir-lang/tree-sitter-elixir        v0.3.4
 haskell       tree-sitter/tree-sitter-haskell       v0.23.1
 ocaml         tree-sitter/tree-sitter-ocaml         v0.23.2   grammars/ocaml/src
-zig           tree-sitter-grammars/tree-sitter-zig  v0.1.1
-dart          UserNobody/tree-sitter-dart           v0.0.3
+zig           tree-sitter-grammars/tree-sitter-zig  v1.1.2
+dart          UserNobody14/tree-sitter-dart         main
 r             r-lib/tree-sitter-r                   v1.1.0
-perl          tree-sitter-perl/tree-sitter-perl     v1.1.0
+perl          tree-sitter-perl/tree-sitter-perl     v1.0.0
 toml          tree-sitter-grammars/tree-sitter-toml v0.7.0
 yaml          tree-sitter-grammars/tree-sitter-yaml v0.7.0
 html          tree-sitter/tree-sitter-html          v0.23.2
 css           tree-sitter/tree-sitter-css           v0.23.2
 sql           DerekStride/tree-sitter-sql           v0.3.6
 hcl           tree-sitter-grammars/tree-sitter-hcl  v1.1.0
-nix           nix-community/tree-sitter-nix         v0.1.0
+nix           nix-community/tree-sitter-nix         v0.3.0
 clojure       sogaiu/tree-sitter-clojure            v0.0.13
-erlang        WhatsApp/tree-sitter-erlang           v0.9.1
+erlang        WhatsApp/tree-sitter-erlang           0.15
 objc          tree-sitter-grammars/tree-sitter-objc v3.0.2
 "
 
