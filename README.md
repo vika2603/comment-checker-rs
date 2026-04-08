@@ -78,7 +78,7 @@ In hook mode, only comments within the changed region are flagged (not the entir
 
 ## Usage
 
-### As a Hook (primary use case)
+### Hook Setup
 
 ```bash
 # Install for Claude Code
@@ -94,25 +94,27 @@ comment-checker uninstall codex
 
 This adds a PostToolUse hook that runs automatically on every Write/Edit/MultiEdit operation. When the hook finds flagged comments, it outputs an XML report to stderr and exits with code 2, which the AI agent sees as feedback.
 
-### As a CLI
+### Pre-fetch Grammars
 
 ```bash
-# Check specific files
-comment-checker src/main.rs src/lib.rs
+# Download all grammar .so files
+comment-checker fetch-parsers
 
-# Check a directory (respects .gitignore)
-comment-checker src/
-
-# JSONL output
-comment-checker --format jsonl src/
-
-# Quiet mode (exit code only)
-comment-checker --quiet src/
+# Download specific grammars
+comment-checker fetch-parsers rust python typescript
 ```
 
-**Exit codes (CLI mode):** 0 = no comments found, 1 = comments flagged, 2 = tool error
+Grammars are also automatically downloaded on first use and cached in `~/.cache/comment-checker/parsers/`.
 
-**Exit codes (hook mode):** 0 = clean, 2 = comments flagged (feedback to agent)
+### Options
+
+```
+--config <path>    Use a specific config file
+--prompt <tpl>     Custom XML output template
+-q, --quiet        Suppress output (exit code only)
+```
+
+**Exit codes:** 0 = no flagged comments, 2 = flagged comments found (feedback to agent)
 
 ## Built-in Allowlist
 
@@ -141,15 +143,16 @@ allowlist = [
   "^PERF:",
 ]
 
-# Restrict to specific languages (empty = all supported)
-languages = ["rust", "python", "typescript"]
+# Custom instruction for AI agents (overrides built-in default)
+instruction = "Remove outdated or redundant comments. Keep comments that explain why, not what."
+
+# Grammar settings
+[parsers]
+auto_download = true      # Download missing grammars automatically (default: true)
+# path = "/custom/parsers"  # Optional custom grammar directory
 ```
 
-**Config discovery order** (first match wins, no merging):
-1. `--config <path>` (explicit)
-2. Walk up from current directory to root, first `.comment-checker.toml` found
-3. `$XDG_CONFIG_HOME/comment-checker/config.toml`
-4. Built-in defaults
+**Config discovery:** project config (`.comment-checker.toml` found by walking up from cwd) is merged with global config (`$XDG_CONFIG_HOME/comment-checker/config.toml`). Allowlist patterns are combined; project `instruction` and `parsers.path` override global.
 
 ## Custom Prompt Template
 
