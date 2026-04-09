@@ -56,11 +56,14 @@ pub fn format_jsonl(diagnostics: &[Diagnostic]) -> String {
 }
 
 const DEFAULT_INSTRUCTION: &str = "\
-Remove comments that merely restate the code, describe obvious behavior, or were left by a previous edit. \
-Keep comments that explain WHY (non-obvious intent, business rules, trade-offs, workarounds), \
-mark incomplete work (TODO/FIXME with context), \
-or are required by tooling (linter directives, type annotations, license headers). \
-When in doubt, remove the comment -- the code should speak for itself.";
+Do NOT edit the file yet. Collect ALL flagged comments from this report first, \
+then apply all changes in a SINGLE edit operation. \
+For each flagged comment, decide: KEEP, REWRITE, or REMOVE. \
+KEEP as-is if it explains WHY (non-obvious intent, business rules, trade-offs, workarounds), \
+marks incomplete work (TODO/FIXME with context), or is required by tooling. \
+REWRITE if it has useful intent but restates the code -- make it explain WHY instead of WHAT. \
+REMOVE only if it merely restates the code, describes obvious behavior, or is a leftover from a previous edit with no remaining value. \
+If a comment might be useful to a future reader, keep it.";
 
 const DEFAULT_TEMPLATE: &str = r#"<comment-checker>
 <summary>Found {{ count }} flagged comment(s) in {{ groups }} group(s).</summary>
