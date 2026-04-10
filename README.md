@@ -156,13 +156,22 @@ auto_download = true      # Download missing grammars automatically (default: tr
 
 ## Custom Prompt Template
 
-Customize the XML output that AI agents see:
+Customize the output that AI agents see by passing a [minijinja](https://github.com/mitsuhiko/minijinja) template via `--prompt` or the `instruction` config field. The template is rendered with this context:
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `count` | integer | Total number of flagged comments |
+| `groups` | integer | Number of consecutive-comment groups (one group per contiguous run) |
+| `comments` | list | Each item has `file`, `line` (string, e.g. `"12"` or `"12-14"`), `kind` (`line`/`block`/`doc`), and `text` |
+| `instruction` | string | The instruction for the AI agent (built-in default or `instruction` from config) |
+
+Example:
 
 ```bash
-comment-checker --prompt '<review>{{count}} comments to fix:\n{{comments}}</review>'
+comment-checker --prompt '<review>{{ count }} comments to fix:
+{% for c in comments %}- {{ c.file }}:{{ c.line }} {{ c.text }}
+{% endfor %}</review>'
 ```
-
-Placeholders: `{{comments}}` (XML comment blocks), `{{count}}` (number of flagged comments).
 
 ## How Allowlist Matching Works
 
