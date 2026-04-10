@@ -76,7 +76,6 @@ pub fn builtin_patterns() -> Vec<&'static str> {
         r"(?i)^#region\b",
         r"(?i)^#endregion\b",
         r"(?i)^MARK:",
-        r"(?i)^pragma\s+mark\b",
     ]
 }
 
@@ -137,6 +136,14 @@ mod tests {
     #[test]
     fn test_todo_not_allowed() {
         assert!(!allowlist().is_allowed(&make_comment("TODO: fix this")));
+    }
+
+    #[test]
+    fn test_pragma_variants_allowed() {
+        let al = allowlist();
+        assert!(al.is_allowed(&make_comment("pragma once")));
+        assert!(al.is_allowed(&make_comment("pragma mark - Section")));
+        assert!(al.is_allowed(&make_comment("PRAGMA pack(push, 1)")));
     }
 
     #[test]
