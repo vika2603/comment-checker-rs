@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use crate::error::{Error, Result};
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ParserConfig {
     pub path: Option<PathBuf>,
     #[serde(default = "default_true")]
@@ -24,6 +25,7 @@ impl Default for ParserConfig {
 }
 
 #[derive(Debug, Deserialize, Default)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
     #[serde(default)]
     pub allowlist: Vec<String>,
@@ -161,6 +163,26 @@ mod tests {
         assert_eq!(
             merged.parsers.path.as_deref(),
             Some(Path::new("/global/parsers"))
+        );
+    }
+
+    #[test]
+    fn test_unknown_top_level_field_is_rejected() {
+        let err = toml::from_str::<Config>("allow_list = [\"foo\"]\n")
+            .expect_err("typo'd field should be rejected");
+        assert!(
+            err.to_string().contains("unknown field"),
+            "error should explain the unknown field, got: {err}"
+        );
+    }
+
+    #[test]
+    fn test_unknown_parsers_field_is_rejected() {
+        let err = toml::from_str::<Config>("[parsers]\nunknown_field = true\n")
+            .expect_err("typo'd nested field should be rejected");
+        assert!(
+            err.to_string().contains("unknown field"),
+            "error should explain the unknown field, got: {err}"
         );
     }
 
