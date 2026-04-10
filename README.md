@@ -122,13 +122,14 @@ These comment patterns are always allowed:
 
 | Category | Examples |
 |----------|---------|
-| Linter directives | `eslint-disable`, `noqa`, `@ts-ignore`, `@ts-expect-error`, `rubocop:disable` |
-| Compiler pragmas | `pragma`, `go:generate`, `go:build`, `go:embed` |
+| Linter directives | `eslint-disable`, `eslint-enable`, `noqa`, `@ts-ignore`, `@ts-expect-error`, `@ts-nocheck`, `noinspection`, `rubocop:disable`, `rubocop:enable`, `pylint:disable`, `pylint:enable`, `flake8:` |
+| Rust attributes | `allow(...)`, `deny(...)`, `expect(...)`, `warn(...)`, `forbid(...)` |
+| Compiler pragmas | `pragma`, `go:generate`, `go:build`, `go:embed`, `go:linkname`, `go:nosplit`, `go:noinline`, `go:noescape` |
 | Type annotations | `type: ignore`, `pyright:`, `mypy:` |
 | License headers | `Copyright`, `License`, `SPDX-License-Identifier` |
 | Region markers | `#region`, `#endregion`, `MARK:` |
 | BDD keywords | `given`, `when`, `then` |
-| Shebangs | `#!/usr/bin/env`, `#!/bin/bash` |
+| Shebangs | `#!/usr/bin/...`, `#!/bin/...` |
 | Encoding | `-*- coding: -*-` |
 
 ## Configuration
