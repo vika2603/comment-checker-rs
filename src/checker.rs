@@ -124,6 +124,42 @@ mod tests {
     }
 
     #[test]
+    fn test_filter_by_ranges_empty_drops_all() {
+        let al = Allowlist::new(&[]).expect("builtin patterns valid");
+        let comments = vec![make_comment("a", 1), make_comment("b", 5)];
+        let diags = check_comments("test.rs", comments, &al);
+        let filtered = filter_by_ranges(diags, &[]);
+        assert!(filtered.is_empty());
+    }
+
+    #[test]
+    fn test_filter_by_ranges_multiline_strictly_contains_range() {
+        let al = Allowlist::new(&[]).expect("builtin patterns valid");
+        let comments = vec![make_multiline_comment("wide block", 1, 20)];
+        let diags = check_comments("test.rs", comments, &al);
+        let range = 5..10;
+        let filtered = filter_by_ranges(diags, std::slice::from_ref(&range));
+        assert_eq!(
+            filtered.len(),
+            1,
+            "comment that fully spans across a range must be kept"
+        );
+    }
+
+    #[test]
+    fn test_filter_by_ranges_disjoint_drops() {
+        let al = Allowlist::new(&[]).expect("builtin patterns valid");
+        let comments = vec![
+            make_comment("before", 1),
+            make_comment("after", 20),
+        ];
+        let diags = check_comments("test.rs", comments, &al);
+        let range = 5..10;
+        let filtered = filter_by_ranges(diags, std::slice::from_ref(&range));
+        assert!(filtered.is_empty());
+    }
+
+    #[test]
     fn test_sort_key() {
         let al = Allowlist::new(&[]).expect("builtin patterns valid");
         let comments = vec![make_comment("hello", 3)];
