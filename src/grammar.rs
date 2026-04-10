@@ -88,25 +88,24 @@ impl GrammarCache {
     ) -> Result<tree_sitter::Language, String> {
         let search_dirs = Self::build_search_dirs(parser_config);
 
-        match self.get(lang, &search_dirs) {
+        let initial_err = match self.get(lang, &search_dirs) {
             Ok(ts_lang) => return Ok(ts_lang),
-            Err(_) if !parser_config.auto_download => {}
-            Err(_) => {
-                if let Some(cache_dir) = grammar_cache_dir() {
-                    match download_grammar(lang.grammar_name(), &cache_dir) {
-                        Ok(_) => {
-                            return self.get(lang, &[cache_dir]);
-                        }
-                        Err(e) => {
-                            eprintln!("warning: download failed for {}: {e}", lang.grammar_name());
-                        }
-                    }
+            Err(e) => e,
+        };
+
+        if parser_config.auto_download
+            && let Some(cache_dir) = grammar_cache_dir()
+        {
+            match download_grammar(lang.grammar_name(), &cache_dir) {
+                Ok(_) => return self.get(lang, &[cache_dir]),
+                Err(e) => {
+                    eprintln!("warning: download failed for {}: {e}", lang.grammar_name());
                 }
             }
         }
 
         Err(format!(
-            "grammar '{}' not available (searched {} dirs, download {})",
+            "grammar '{}' not available ({initial_err}; searched {} dirs, download {})",
             lang.grammar_name(),
             search_dirs.len(),
             if parser_config.auto_download {
@@ -276,6 +275,26 @@ mod tests {
         let result = cache.get(Language::Rust, &[PathBuf::from("/nonexistent")]);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("not found"));
+    }
+
+    #[test]
+    fn test_resolve_error_preserves_initial_cause() {
+        let mut cache = GrammarCache::new();
+        let config = crate::config::ParserConfig {
+            path: Some(PathBuf::from("/nonexistent/custom")),
+            auto_download: false,
+        };
+        let err = cache
+            .resolve(Language::Kotlin, &config)
+            .expect_err("kotlin grammar must not be available in test env");
+        assert!(
+            err.contains("not found"),
+            "resolve error should surface the underlying cause, got: {err}"
+        );
+        assert!(
+            err.contains("download disabled"),
+            "resolve error should note download state, got: {err}"
+        );
     }
 
     #[test]
