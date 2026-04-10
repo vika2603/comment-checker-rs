@@ -224,6 +224,35 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_hook_input_missing_tool_input_errors() {
+        let result = parse_hook_input(r#"{"tool_name": "Write"}"#);
+        assert!(result.is_err(), "missing tool_input should surface as error");
+    }
+
+    #[test]
+    fn test_parse_hook_input_missing_file_path_errors() {
+        let json = r#"{"tool_name":"Write","tool_input":{"content":"x"}}"#;
+        let result = parse_hook_input(json);
+        assert!(result.is_err(), "missing file_path should surface as error");
+    }
+
+    #[test]
+    fn test_parse_hook_input_unknown_tool_checks_whole_file() {
+        let json = r#"{
+            "tool_name": "Bash",
+            "tool_input": {
+                "file_path": "/tmp/example.rs"
+            }
+        }"#;
+        let result = parse_hook_input(json).unwrap();
+        assert_eq!(result.file_path, PathBuf::from("/tmp/example.rs"));
+        assert!(
+            result.changed_ranges.is_none(),
+            "unknown tool_name should fall through to whole-file check"
+        );
+    }
+
+    #[test]
     fn test_parse_hook_input_write_tool() {
         // Write tool => check whole file (None ranges)
         let json = r#"{
