@@ -150,20 +150,31 @@ pub fn format_prompt(
     let tmpl = template.unwrap_or(DEFAULT_TEMPLATE);
     let mut env = Environment::new();
     env.set_auto_escape_callback(|_| minijinja::AutoEscape::None);
-    env.add_template("prompt", tmpl).unwrap_or_else(|_| {
-        env.add_template("prompt", DEFAULT_TEMPLATE).unwrap();
+
+    if let Err(e) = env.add_template("prompt", tmpl) {
+        eprintln!(
+            "comment-checker: custom prompt template parse error ({e}), falling back to default"
+        );
+        env.add_template("prompt", DEFAULT_TEMPLATE)
+            .expect("default template is static and must parse");
+    }
+
+    let render_result = env.get_template("prompt").and_then(|t| {
+        t.render(context! {
+            count => diagnostics.len(),
+            groups => groups.len(),
+            comments => groups,
+            instruction => instruction,
+        })
     });
 
-    env.get_template("prompt")
-        .and_then(|t| {
-            t.render(context! {
-                count => diagnostics.len(),
-                groups => groups.len(),
-                comments => groups,
-                instruction => instruction,
-            })
-        })
-        .unwrap_or_default()
+    match render_result {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("comment-checker: prompt render error: {e}");
+            String::new()
+        }
+    }
 }
 
 #[cfg(test)]
@@ -243,6 +254,14 @@ mod tests {
         assert!(out.contains("in 2 group(s)"));
         assert!(out.contains("line=\"1\""));
         assert!(out.contains("line=\"10\""));
+    }
+
+    #[test]
+    fn test_format_prompt_invalid_template_falls_back() {
+        let diags = vec![make_diag("a.rs", "note", 1)];
+        let out = format_prompt(&diags, Some("{% if unterminated"), None);
+        assert!(out.contains("<comment-checker>"));
+        assert!(out.contains("file=\"a.rs\""));
     }
 
     #[test]
