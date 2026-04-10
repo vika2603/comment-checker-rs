@@ -1,12 +1,8 @@
+mod common;
+
 use std::path::Path;
 
-fn load_ts_language(
-    lang: comment_checker::parser::languages::Language,
-) -> Option<tree_sitter::Language> {
-    let cache_dir = comment_checker::grammar::grammar_cache_dir()?;
-    let cache = Box::leak(Box::new(comment_checker::grammar::GrammarCache::new()));
-    cache.get(lang, &[cache_dir]).ok()
-}
+use common::load_ts_language;
 
 /// Returns None when the parser for the fixture's language is not installed,
 /// allowing the caller to skip the test gracefully.

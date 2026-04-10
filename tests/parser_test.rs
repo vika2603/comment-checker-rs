@@ -1,13 +1,11 @@
+mod common;
+
 use comment_checker::allowlist::Allowlist;
 use comment_checker::parser::{comment::CommentKind, languages::Language, parse_comments};
 
-const RUST_FIXTURE: &str = include_str!("fixtures/rust.rs");
+use common::load_ts_language;
 
-fn load_ts_language(lang: Language) -> Option<tree_sitter::Language> {
-    let cache_dir = comment_checker::grammar::grammar_cache_dir()?;
-    let cache = Box::leak(Box::new(comment_checker::grammar::GrammarCache::new()));
-    cache.get(lang, &[cache_dir]).ok()
-}
+const RUST_FIXTURE: &str = include_str!("fixtures/rust.rs");
 
 #[test]
 fn test_parse_rust_fixture_finds_comments() {
