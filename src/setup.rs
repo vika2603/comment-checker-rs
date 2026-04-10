@@ -147,7 +147,25 @@ fn read_or_create(path: &PathBuf) -> Result<serde_json::Value, String> {
 fn write_pretty(path: &PathBuf, value: &serde_json::Value) -> Result<(), String> {
     let json =
         serde_json::to_string_pretty(value).map_err(|e| format!("cannot serialize JSON: {e}"))?;
-    std::fs::write(path, json + "\n").map_err(|e| format!("cannot write {}: {e}", path.display()))
+    let content = json + "\n";
+
+    // Atomic write: tmp file in the same directory (so rename is same-filesystem),
+    // then atomic rename. PID in the name avoids concurrent-writer collisions.
+    let file_name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("settings");
+    let tmp_path = path.with_file_name(format!(".{file_name}.tmp.{}", std::process::id()));
+    std::fs::write(&tmp_path, content)
+        .map_err(|e| format!("cannot write {}: {e}", tmp_path.display()))?;
+    std::fs::rename(&tmp_path, path).map_err(|e| {
+        let _ = std::fs::remove_file(&tmp_path);
+        format!(
+            "cannot rename {} -> {}: {e}",
+            tmp_path.display(),
+            path.display()
+        )
+    })
 }
 
 fn already_installed(arr: &[serde_json::Value]) -> bool {
