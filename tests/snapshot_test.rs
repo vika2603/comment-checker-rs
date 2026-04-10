@@ -21,7 +21,10 @@ fn try_check_fixture(fixture_name: &str) -> Option<String> {
         .unwrap();
     let lang = comment_checker::parser::languages::Language::from_extension(ext)
         .unwrap_or_else(|| panic!("unsupported extension: {ext}"));
-    let ts_lang = load_ts_language(lang)?;
+    let Some(ts_lang) = load_ts_language(lang) else {
+        eprintln!("skipping {fixture_name}: no cached grammar for {lang:?}");
+        return None;
+    };
     let comments = comment_checker::parser::parse_comments(&source, lang, &ts_lang)
         .unwrap_or_else(|| panic!("parse failed for {fixture_name}"));
     let allowlist = comment_checker::allowlist::Allowlist::new(&[]).unwrap();
@@ -31,9 +34,9 @@ fn try_check_fixture(fixture_name: &str) -> Option<String> {
 
 #[test]
 fn test_rust_snapshot() {
-    if let Some(output) = try_check_fixture("rust.rs") {
-        insta::assert_snapshot!(output);
-    }
+    let output = try_check_fixture("rust.rs")
+        .expect("rust grammar must be available -- canary that catches missing-parser regressions");
+    insta::assert_snapshot!(output);
 }
 
 #[test]
