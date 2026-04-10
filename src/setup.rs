@@ -116,8 +116,10 @@ fn remove_hook_from_root(root: &mut serde_json::Value) -> RemoveOutcome {
 }
 
 fn settings_path(target: &Target) -> Result<PathBuf, String> {
-    let home =
-        std::env::var("HOME").map_err(|_| "HOME environment variable not set".to_string())?;
+    let home = std::env::var("HOME")
+        .ok()
+        .filter(|h| !h.is_empty())
+        .ok_or_else(|| "HOME environment variable not set".to_string())?;
     Ok(match target {
         Target::Claude => PathBuf::from(&home).join(".claude").join("settings.json"),
         Target::Codex => PathBuf::from(&home).join(".codex").join("hooks.json"),

@@ -217,10 +217,13 @@ pub fn download_grammar(grammar_name: &str, cache_dir: &Path) -> Result<PathBuf,
 }
 
 pub fn grammar_cache_dir() -> Option<PathBuf> {
-    let base = if let Ok(xdg) = std::env::var("XDG_CACHE_HOME") {
+    let xdg = std::env::var("XDG_CACHE_HOME")
+        .ok()
+        .filter(|v| !v.is_empty());
+    let base = if let Some(xdg) = xdg {
         PathBuf::from(xdg)
     } else {
-        let home = std::env::var("HOME").ok()?;
+        let home = std::env::var("HOME").ok().filter(|v| !v.is_empty())?;
         PathBuf::from(home).join(".cache")
     };
     Some(base.join("comment-checker/parsers"))

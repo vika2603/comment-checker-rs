@@ -94,11 +94,15 @@ fn read_config(path: &Path) -> Result<Config> {
 }
 
 fn xdg_config_dir() -> Option<PathBuf> {
-    if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
+    let xdg = std::env::var("XDG_CONFIG_HOME")
+        .ok()
+        .filter(|v| !v.is_empty());
+    if let Some(xdg) = xdg {
         Some(PathBuf::from(xdg))
     } else {
         std::env::var("HOME")
             .ok()
+            .filter(|v| !v.is_empty())
             .map(|h| PathBuf::from(h).join(".config"))
     }
 }
