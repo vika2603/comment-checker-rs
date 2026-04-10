@@ -6,12 +6,13 @@ pub fn format_text(diagnostics: &[Diagnostic]) -> String {
     let mut out = String::new();
     for d in diagnostics {
         let first_line = d.comment.content.lines().next().unwrap_or("").trim_end();
-        let raw_first = format!(
-            "{}{}{}",
-            d.comment.prefix,
-            if first_line.is_empty() { "" } else { " " },
-            first_line
-        );
+        let raw_first = if d.comment.prefix.is_empty() {
+            first_line.to_string()
+        } else if first_line.is_empty() {
+            d.comment.prefix.clone()
+        } else {
+            format!("{} {}", d.comment.prefix, first_line)
+        };
         out.push_str(&format!(
             "{}:{}:{}: warning[comment]: {}\n",
             d.file, d.comment.span.start_line, d.comment.span.start_col, raw_first,
@@ -179,6 +180,29 @@ mod tests {
         let diags = vec![make_diag("foo.rs", "TODO: fix", 10)];
         let out = format_text(&diags);
         assert!(out.contains("foo.rs:10:0: warning[comment]: // TODO: fix"));
+    }
+
+    #[test]
+    fn test_format_text_empty_prefix_no_leading_space() {
+        let diag = Diagnostic {
+            file: "foo.rb".to_string(),
+            comment: Comment {
+                kind: CommentKind::Line,
+                prefix: String::new(),
+                content: "=begin\nrest".to_string(),
+                span: Span {
+                    start_line: 1,
+                    start_col: 0,
+                    end_line: 2,
+                    end_col: 4,
+                },
+            },
+        };
+        let out = format_text(std::slice::from_ref(&diag));
+        assert!(
+            out.contains("warning[comment]: =begin\n"),
+            "expected no leading space before =begin, got: {out}"
+        );
     }
 
     #[test]
