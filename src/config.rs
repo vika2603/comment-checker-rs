@@ -167,6 +167,36 @@ mod tests {
     }
 
     #[test]
+    fn test_load_project_config_walks_up_from_nested_dir() {
+        let tmp = tempfile::tempdir().unwrap();
+        let deep = tmp.path().join("a").join("b").join("c");
+        std::fs::create_dir_all(&deep).unwrap();
+        std::fs::write(
+            tmp.path().join(".comment-checker.toml"),
+            "allowlist = [\"ANCHOR-PATTERN\"]\n",
+        )
+        .unwrap();
+
+        let loaded = load_project_config(None, &deep)
+            .expect("walk should succeed")
+            .expect("config must be found by walking up");
+        assert_eq!(loaded.allowlist, vec!["ANCHOR-PATTERN".to_string()]);
+    }
+
+    #[test]
+    fn test_load_project_config_explicit_path_skips_walk() {
+        let tmp = tempfile::tempdir().unwrap();
+        let explicit = tmp.path().join("custom.toml");
+        std::fs::write(&explicit, "allowlist = [\"FROM-EXPLICIT\"]\n").unwrap();
+
+        let unrelated = tempfile::tempdir().unwrap();
+        let loaded = load_project_config(Some(&explicit), unrelated.path())
+            .expect("explicit path should be honored")
+            .expect("explicit config must be returned");
+        assert_eq!(loaded.allowlist, vec!["FROM-EXPLICIT".to_string()]);
+    }
+
+    #[test]
     fn test_unknown_top_level_field_is_rejected() {
         let err = toml::from_str::<Config>("allow_list = [\"foo\"]\n")
             .expect_err("typo'd field should be rejected");
