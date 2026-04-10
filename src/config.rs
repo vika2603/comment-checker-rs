@@ -78,13 +78,9 @@ fn merge(global: Config, project: Config) -> Config {
     Config {
         allowlist,
         instruction: project.instruction.or(global.instruction),
-        parsers: if project.parsers.path.is_some() {
-            project.parsers
-        } else {
-            ParserConfig {
-                path: global.parsers.path.or(project.parsers.path),
-                auto_download: project.parsers.auto_download,
-            }
+        parsers: ParserConfig {
+            path: project.parsers.path.or(global.parsers.path),
+            auto_download: project.parsers.auto_download,
         },
     }
 }
@@ -104,5 +100,73 @@ fn xdg_config_dir() -> Option<PathBuf> {
         std::env::var("HOME")
             .ok()
             .map(|h| PathBuf::from(h).join(".config"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn cfg(allowlist: &[&str], instruction: Option<&str>, path: Option<&str>) -> Config {
+        Config {
+            allowlist: allowlist.iter().map(|s| s.to_string()).collect(),
+            instruction: instruction.map(|s| s.to_string()),
+            parsers: ParserConfig {
+                path: path.map(PathBuf::from),
+                auto_download: true,
+            },
+        }
+    }
+
+    #[test]
+    fn test_merge_appends_allowlists() {
+        let merged = merge(cfg(&["A"], None, None), cfg(&["B", "C"], None, None));
+        assert_eq!(merged.allowlist, vec!["A", "B", "C"]);
+    }
+
+    #[test]
+    fn test_merge_project_instruction_overrides_global() {
+        let merged = merge(cfg(&[], Some("global"), None), cfg(&[], Some("project"), None));
+        assert_eq!(merged.instruction.as_deref(), Some("project"));
+    }
+
+    #[test]
+    fn test_merge_falls_back_to_global_instruction() {
+        let merged = merge(cfg(&[], Some("global"), None), cfg(&[], None, None));
+        assert_eq!(merged.instruction.as_deref(), Some("global"));
+    }
+
+    #[test]
+    fn test_merge_project_parser_path_wins() {
+        let merged = merge(
+            cfg(&[], None, Some("/global/parsers")),
+            cfg(&[], None, Some("/project/parsers")),
+        );
+        assert_eq!(
+            merged.parsers.path.as_deref(),
+            Some(Path::new("/project/parsers"))
+        );
+    }
+
+    #[test]
+    fn test_merge_falls_back_to_global_parser_path() {
+        let merged = merge(
+            cfg(&[], None, Some("/global/parsers")),
+            cfg(&[], None, None),
+        );
+        assert_eq!(
+            merged.parsers.path.as_deref(),
+            Some(Path::new("/global/parsers"))
+        );
+    }
+
+    #[test]
+    fn test_merge_auto_download_uses_project_value() {
+        let mut global = cfg(&[], None, None);
+        global.parsers.auto_download = true;
+        let mut project = cfg(&[], None, None);
+        project.parsers.auto_download = false;
+        let merged = merge(global, project);
+        assert!(!merged.parsers.auto_download);
     }
 }
