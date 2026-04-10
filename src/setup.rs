@@ -18,30 +18,10 @@ pub fn init(target: &Target) -> Result<(), String> {
 
     let mut root = read_or_create(&path)?;
 
-    let hooks = root
-        .as_object_mut()
-        .ok_or("settings file is not a JSON object")?
-        .entry("hooks")
-        .or_insert_with(|| serde_json::json!({}));
-
-    let post = hooks
-        .as_object_mut()
-        .ok_or("hooks field is not a JSON object")?
-        .entry("PostToolUse")
-        .or_insert_with(|| serde_json::json!([]));
-
-    let arr = post
-        .as_array_mut()
-        .ok_or("PostToolUse field is not an array")?;
-
-    if already_installed(arr) {
+    if !add_hook_to_root(&mut root)? {
         eprintln!("comment-checker hook already installed in {display}");
         return Ok(());
     }
-
-    let entry: serde_json::Value =
-        serde_json::from_str(HOOK_ENTRY).expect("built-in hook JSON must be valid");
-    arr.push(entry);
 
     write_pretty(&path, &root)?;
     eprintln!("comment-checker hook installed in {display}");
@@ -59,30 +39,80 @@ pub fn uninstall(target: &Target) -> Result<(), String> {
 
     let mut root = read_or_create(&path)?;
 
+    match remove_hook_from_root(&mut root) {
+        RemoveOutcome::NoHooks => {
+            eprintln!("no hooks configured in {display}, nothing to uninstall");
+            Ok(())
+        }
+        RemoveOutcome::NoPostToolUse => {
+            eprintln!("no PostToolUse hooks in {display}, nothing to uninstall");
+            Ok(())
+        }
+        RemoveOutcome::NotFound => {
+            eprintln!("comment-checker hook not found in {display}, nothing to uninstall");
+            Ok(())
+        }
+        RemoveOutcome::Removed => {
+            write_pretty(&path, &root)?;
+            eprintln!("comment-checker hook removed from {display}");
+            Ok(())
+        }
+    }
+}
+
+fn add_hook_to_root(root: &mut serde_json::Value) -> Result<bool, String> {
+    let hooks = root
+        .as_object_mut()
+        .ok_or("settings file is not a JSON object")?
+        .entry("hooks")
+        .or_insert_with(|| serde_json::json!({}));
+
+    let post = hooks
+        .as_object_mut()
+        .ok_or("hooks field is not a JSON object")?
+        .entry("PostToolUse")
+        .or_insert_with(|| serde_json::json!([]));
+
+    let arr = post
+        .as_array_mut()
+        .ok_or("PostToolUse field is not an array")?;
+
+    if already_installed(arr) {
+        return Ok(false);
+    }
+
+    let entry: serde_json::Value =
+        serde_json::from_str(HOOK_ENTRY).expect("built-in hook JSON must be valid");
+    arr.push(entry);
+    Ok(true)
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum RemoveOutcome {
+    NoHooks,
+    NoPostToolUse,
+    NotFound,
+    Removed,
+}
+
+fn remove_hook_from_root(root: &mut serde_json::Value) -> RemoveOutcome {
     let Some(hooks) = root.get_mut("hooks") else {
-        eprintln!("no hooks configured in {display}, nothing to uninstall");
-        return Ok(());
+        return RemoveOutcome::NoHooks;
     };
     let Some(post) = hooks.get_mut("PostToolUse") else {
-        eprintln!("no PostToolUse hooks in {display}, nothing to uninstall");
-        return Ok(());
+        return RemoveOutcome::NoPostToolUse;
     };
     let Some(arr) = post.as_array_mut() else {
-        return Ok(());
+        return RemoveOutcome::NoPostToolUse;
     };
 
     let before = arr.len();
     arr.retain(|entry| !is_comment_checker_entry(entry));
-    let after = arr.len();
-
-    if before == after {
-        eprintln!("comment-checker hook not found in {display}, nothing to uninstall");
-        return Ok(());
+    if arr.len() == before {
+        RemoveOutcome::NotFound
+    } else {
+        RemoveOutcome::Removed
     }
-
-    write_pretty(&path, &root)?;
-    eprintln!("comment-checker hook removed from {display}");
-    Ok(())
 }
 
 fn settings_path(target: &Target) -> Result<PathBuf, String> {
@@ -131,5 +161,117 @@ fn is_comment_checker_entry(entry: &serde_json::Value) -> bool {
         })
     } else {
         false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_add_hook_to_empty_root() {
+        let mut root = json!({});
+        let added = add_hook_to_root(&mut root).unwrap();
+        assert!(added);
+        let arr = root["hooks"]["PostToolUse"].as_array().unwrap();
+        assert_eq!(arr.len(), 1);
+        assert!(is_comment_checker_entry(&arr[0]));
+    }
+
+    #[test]
+    fn test_add_hook_idempotent() {
+        let mut root = json!({});
+        assert!(add_hook_to_root(&mut root).unwrap());
+        assert!(!add_hook_to_root(&mut root).unwrap());
+        let arr = root["hooks"]["PostToolUse"].as_array().unwrap();
+        assert_eq!(arr.len(), 1);
+    }
+
+    #[test]
+    fn test_add_hook_preserves_existing_entries() {
+        let mut root = json!({
+            "hooks": {
+                "PostToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "other-tool"}]}],
+                "PreToolUse": [{"matcher": "Read", "hooks": []}]
+            },
+            "other_setting": 42
+        });
+        let added = add_hook_to_root(&mut root).unwrap();
+        assert!(added);
+        let arr = root["hooks"]["PostToolUse"].as_array().unwrap();
+        assert_eq!(arr.len(), 2);
+        assert!(arr.iter().any(is_comment_checker_entry));
+        assert!(arr.iter().any(|e| !is_comment_checker_entry(e)));
+        assert!(root.get("other_setting").is_some());
+        assert!(root["hooks"].get("PreToolUse").is_some());
+    }
+
+    #[test]
+    fn test_remove_hook_from_empty_root() {
+        let mut root = json!({});
+        assert_eq!(remove_hook_from_root(&mut root), RemoveOutcome::NoHooks);
+    }
+
+    #[test]
+    fn test_remove_hook_with_no_post_tool_use() {
+        let mut root = json!({"hooks": {"PreToolUse": []}});
+        assert_eq!(
+            remove_hook_from_root(&mut root),
+            RemoveOutcome::NoPostToolUse
+        );
+    }
+
+    #[test]
+    fn test_remove_hook_not_present() {
+        let mut root = json!({
+            "hooks": {
+                "PostToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "other"}]}]
+            }
+        });
+        assert_eq!(remove_hook_from_root(&mut root), RemoveOutcome::NotFound);
+        let arr = root["hooks"]["PostToolUse"].as_array().unwrap();
+        assert_eq!(arr.len(), 1);
+    }
+
+    #[test]
+    fn test_remove_hook_round_trip() {
+        let mut root = json!({});
+        add_hook_to_root(&mut root).unwrap();
+        assert_eq!(remove_hook_from_root(&mut root), RemoveOutcome::Removed);
+        let arr = root["hooks"]["PostToolUse"].as_array().unwrap();
+        assert!(arr.is_empty());
+    }
+
+    #[test]
+    fn test_remove_hook_preserves_other_entries() {
+        let mut root = json!({
+            "hooks": {
+                "PostToolUse": [
+                    {"matcher": "Bash", "hooks": [{"type": "command", "command": "other"}]},
+                    {"matcher": "Write", "hooks": [{"type": "command", "command": "comment-checker"}]}
+                ]
+            }
+        });
+        assert_eq!(remove_hook_from_root(&mut root), RemoveOutcome::Removed);
+        let arr = root["hooks"]["PostToolUse"].as_array().unwrap();
+        assert_eq!(arr.len(), 1);
+        assert!(!is_comment_checker_entry(&arr[0]));
+    }
+
+    #[test]
+    fn test_is_comment_checker_entry_substring() {
+        let entry = json!({
+            "hooks": [{"type": "command", "command": "/usr/local/bin/comment-checker --quiet"}]
+        });
+        assert!(is_comment_checker_entry(&entry));
+    }
+
+    #[test]
+    fn test_is_comment_checker_entry_unrelated() {
+        let entry = json!({
+            "hooks": [{"type": "command", "command": "other-tool"}]
+        });
+        assert!(!is_comment_checker_entry(&entry));
     }
 }
