@@ -170,7 +170,9 @@ pub fn download_grammar(grammar_name: &str, cache_dir: &Path) -> Result<PathBuf,
         .map_err(|e| format!("cannot create cache dir {}: {e}", cache_dir.display()))?;
 
     let url = download_url(grammar_name)?;
-    let tmp_path = cache_dir.join(format!("{grammar_name}.so.tmp"));
+    // Include PID to avoid concurrent downloaders clobbering each other's tmp file.
+    let pid = std::process::id();
+    let tmp_path = cache_dir.join(format!("{grammar_name}.so.tmp.{pid}"));
     let final_path = cache_dir.join(format!("{grammar_name}.so"));
 
     let output = Command::new("curl")
@@ -203,6 +205,7 @@ pub fn download_grammar(grammar_name: &str, cache_dir: &Path) -> Result<PathBuf,
     }
 
     std::fs::rename(&tmp_path, &final_path).map_err(|e| {
+        let _ = std::fs::remove_file(&tmp_path);
         format!(
             "rename {} -> {}: {e}",
             tmp_path.display(),
