@@ -95,12 +95,8 @@ pub fn find_changed_ranges(file_content: &str, new_strings: &[&str]) -> Option<V
     let mut ranges: Vec<Range<usize>> = Vec::new();
 
     for needle in new_strings {
-        let needle_line_count = needle
-            .as_bytes()
-            .iter()
-            .filter(|&&b| b == b'\n')
-            .count()
-            .max(1);
+        // Count logical lines, not `\n`: "a\nb" without a trailing newline still spans 2 lines.
+        let needle_line_count = needle.lines().count().max(1);
         let mut offset = 0;
         while let Some(rel_pos) = file_content[offset..].find(needle) {
             let byte_pos = offset + rel_pos;
@@ -168,6 +164,16 @@ mod tests {
         let ranges = find_changed_ranges(SAMPLE, &["line two", "line nine"]).unwrap();
         // Both ranges touch at 6, should merge into one
         assert!(ranges.len() <= 2);
+    }
+
+    #[test]
+    fn test_find_changed_ranges_multiline_needle_no_trailing_newline() {
+        // Guards against treating `\n` count as line count: this needle has
+        // one `\n` but occupies two logical lines.
+        let ranges = find_changed_ranges(SAMPLE, &["line three\nline four"]).unwrap();
+        assert_eq!(ranges.len(), 1);
+        assert_eq!(ranges[0].start, 1);
+        assert_eq!(ranges[0].end, 8);
     }
 
     #[test]
