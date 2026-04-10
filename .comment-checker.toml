@@ -4,7 +4,17 @@
 allowlist = [
   # Allowlist section headers (organizing long pattern lists)
   "^(Linter|Rust|Compiler|Type|Shebang|Encoding|License|BDD|Region)",
-  "^(Patterns|Allowlist|Test|snapshot_test|Accurate|Dynamic|GrammarCache|Grammar|comment-checker)\\b",
+  "^(Patterns|Allowlist|Test|snapshot_test|Accurate|Dynamic|GrammarCache|Grammar|comment-checker|Clap)\\b",
+
+  # Clap-derived CLI help text (required by tooling; surfaced via --help)
+  "^Path to a custom TOML config",
+  "^Override the minijinja template",
+  "^Suppress non-essential output",
+  "^Install the comment-checker hook",
+  "^Remove a previously installed",
+  "^Download tree-sitter parser grammars",
+  "^Language identifiers to fetch",
+  "^Host tool that comment-checker",
 
   # Test explanation comments (line N, buffer, etc.)
   "^\"",

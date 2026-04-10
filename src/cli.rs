@@ -15,7 +15,7 @@ pub struct Cli {
     #[arg(long)]
     pub config: Option<PathBuf>,
 
-    /// Override the instruction prompt sent to the reviewer.
+    /// Override the minijinja template used to render the flagged-comment report.
     #[arg(long)]
     pub prompt: Option<String>,
 
