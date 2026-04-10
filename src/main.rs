@@ -37,7 +37,7 @@ fn main() -> ExitCode {
             }
         }
         Err(e) => {
-            eprintln!("comment-checker error: {e}");
+            eprintln!("comment-checker: {e}");
             ExitCode::SUCCESS
         }
     }
@@ -47,7 +47,7 @@ fn run_subcommand(f: impl FnOnce() -> std::result::Result<(), String>) -> ExitCo
     match f() {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
-            eprintln!("error: {e}");
+            eprintln!("comment-checker: {e}");
             ExitCode::from(2)
         }
     }
@@ -105,7 +105,7 @@ fn run(args: &Cli) -> Result<bool> {
         Some(c) => c,
         None => {
             eprintln!(
-                "warning: tree-sitter parse failed for {}, skipping",
+                "comment-checker: tree-sitter parse failed for {}, skipping",
                 target.file_path.display()
             );
             return Ok(false);
