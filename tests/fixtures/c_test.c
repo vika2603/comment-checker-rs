@@ -14,7 +14,7 @@ int greet(const char *name) {
     // Another regular comment - should be FLAGGED
     printf("Hello, %s\n", name);
 
-    // pragma comment below:
+    // label for string constants below - should be FLAGGED
     const char *s = "// this is not a comment - inside string";
     const char *t = "/* also not a comment */";
 

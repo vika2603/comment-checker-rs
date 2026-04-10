@@ -65,4 +65,8 @@ allowlist = [
 
   # Test fixture sentinel comment for the cpp raw-string parsing case
   "^Raw string with comment-like text",
+
+  # Test fixture sentinels shared across multiple language fixtures
+  "^Another regular comment - should be FLAGGED",
+  "^label for string constants below",
 ]
