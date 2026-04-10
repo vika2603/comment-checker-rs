@@ -256,6 +256,49 @@ mod tests {
         assert!(out.contains("COMMENTS=// x"));
     }
 
+    fn make_diag_with_kind(
+        file: &str,
+        content: &str,
+        line: usize,
+        kind: CommentKind,
+        prefix: &str,
+    ) -> Diagnostic {
+        Diagnostic {
+            file: file.to_string(),
+            comment: Comment {
+                kind,
+                prefix: prefix.to_string(),
+                content: content.to_string(),
+                span: Span {
+                    start_line: line,
+                    start_col: 0,
+                    end_line: line,
+                    end_col: content.len(),
+                },
+            },
+        }
+    }
+
+    #[test]
+    fn test_group_diagnostics_different_kinds_not_merged() {
+        let diags = vec![
+            make_diag_with_kind("a.rs", "line", 1, CommentKind::Line, "//"),
+            make_diag_with_kind("a.rs", "doc", 2, CommentKind::Doc, "///"),
+        ];
+        let groups = group_diagnostics(&diags);
+        assert_eq!(groups.len(), 2, "different kinds must stay in separate groups");
+    }
+
+    #[test]
+    fn test_group_diagnostics_different_files_not_merged() {
+        let diags = vec![
+            make_diag("a.rs", "first", 1),
+            make_diag("b.rs", "second", 2),
+        ];
+        let groups = group_diagnostics(&diags);
+        assert_eq!(groups.len(), 2, "different files must stay in separate groups");
+    }
+
     #[test]
     fn test_format_prompt_merges_based_on_multiline_end() {
         let diags = vec![
