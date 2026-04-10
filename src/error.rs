@@ -11,14 +11,8 @@ pub enum Error {
         source: toml::de::Error,
     },
 
-    #[error("Invalid hook JSON: {0}")]
-    HookJson(#[from] serde_json::Error),
-
     #[error("Regex pattern error: {0}")]
     Regex(#[from] regex::Error),
-
-    #[error("Grammar error: {0}")]
-    Grammar(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
