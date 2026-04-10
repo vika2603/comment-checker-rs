@@ -7,5 +7,5 @@ tests/fixtures/cpp_test.cpp:3:0: warning[comment]: /* This is a block comment - 
 tests/fixtures/cpp_test.cpp:5:0: warning[comment]: /// This is a Doxygen doc comment - should be FLAGGED
 tests/fixtures/cpp_test.cpp:15:0: warning[comment]: /* * Multi-line block comment
 tests/fixtures/cpp_test.cpp:20:4: warning[comment]: // Another inline comment - should be FLAGGED
-tests/fixtures/cpp_test.cpp:24:4: warning[comment]: // Raw string that contains comment-like text - should NOT be flagged
+tests/fixtures/cpp_test.cpp:24:4: warning[comment]: // Raw string with comment-like text - should be FLAGGED (the next line is not)
 tests/fixtures/cpp_test.cpp:30:0: warning[comment]: // TODO: add exception handling - should be FLAGGED

@@ -21,7 +21,7 @@ std::string greet(const std::string& name) {
     std::string s = "// this is not a comment - inside string";
     std::string t = "/* also not a comment */";
 
-    // Raw string that contains comment-like text - should NOT be flagged
+    // Raw string with comment-like text - should be FLAGGED (the next line is not)
     std::string raw = R"(// not a comment inside raw string)";
 
     return "Hello, " + name;
