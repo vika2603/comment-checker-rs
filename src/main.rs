@@ -139,10 +139,16 @@ fn run(args: &Cli) -> Result<bool> {
 
 fn fetch_parsers(args: &Cli, languages: &[String]) -> std::result::Result<(), String> {
     let start_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
-    let _config = load_config(args.config.as_deref(), &start_dir).map_err(|e| format!("{e}"))?;
+    let config = load_config(args.config.as_deref(), &start_dir).map_err(|e| format!("{e}"))?;
 
-    let cache_dir = comment_checker::grammar::grammar_cache_dir()
-        .ok_or_else(|| "cannot determine cache directory (HOME not set)".to_string())?;
+    let cache_dir = config
+        .parsers
+        .path
+        .clone()
+        .or_else(comment_checker::grammar::grammar_cache_dir)
+        .ok_or_else(|| {
+            "cannot determine cache directory (set parsers.path or HOME)".to_string()
+        })?;
 
     let names: Vec<&str> = if languages.is_empty() {
         Language::all_grammar_names().to_vec()
