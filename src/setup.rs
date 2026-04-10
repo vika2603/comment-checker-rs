@@ -149,8 +149,8 @@ fn write_pretty(path: &PathBuf, value: &serde_json::Value) -> Result<(), String>
         serde_json::to_string_pretty(value).map_err(|e| format!("cannot serialize JSON: {e}"))?;
     let content = json + "\n";
 
-    // Atomic write: tmp file in the same directory (so rename is same-filesystem),
-    // then atomic rename. PID in the name avoids concurrent-writer collisions.
+    // Atomic write: tmp in target dir so rename is same-filesystem.
+    // Include PID to avoid concurrent-writer collisions in the tmp name.
     let file_name = path
         .file_name()
         .and_then(|n| n.to_str())

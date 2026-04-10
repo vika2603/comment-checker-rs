@@ -68,10 +68,10 @@ pub fn builtin_patterns() -> Vec<&'static str> {
         r"(?i)^Copyright\b",
         r"(?i)^License\b",
         r"(?i)^SPDX-License-Identifier:",
-        // BDD step keywords
-        r"(?i)^given\b",
-        r"(?i)^when\b",
-        r"(?i)^then\b",
+        // BDD step keywords (Cucumber/Gherkin always capitalize; prose in lowercase stays flagged)
+        r"^Given\s",
+        r"^When\s",
+        r"^Then\s",
         // Region markers and IDE annotations
         r"(?i)^#region\b",
         r"(?i)^#endregion\b",
@@ -136,6 +136,26 @@ mod tests {
     #[test]
     fn test_todo_not_allowed() {
         assert!(!allowlist().is_allowed(&make_comment("TODO: fix this")));
+    }
+
+    #[test]
+    fn test_bdd_keywords_require_capital_and_space() {
+        let al = allowlist();
+        assert!(al.is_allowed(&make_comment("Given a user is logged in")));
+        assert!(al.is_allowed(&make_comment("When I click submit")));
+        assert!(al.is_allowed(&make_comment("Then the form closes")));
+        assert!(
+            !al.is_allowed(&make_comment("then atomic rename happens after write")),
+            "lowercase prose 'then ...' must not be allowlisted"
+        );
+        assert!(
+            !al.is_allowed(&make_comment("given the size, we allocate")),
+            "lowercase prose 'given ...' must not be allowlisted"
+        );
+        assert!(
+            !al.is_allowed(&make_comment("Thens are the last step")),
+            "'Thens' without trailing space must not match the BDD step pattern"
+        );
     }
 
     #[test]

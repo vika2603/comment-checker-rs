@@ -55,6 +55,7 @@ allowlist = [
   "^Validate ABI",
   "Include PID to avoid concurrent",
   "Count logical lines",
+  "^Atomic write: tmp in target dir",
 
   # Grammar resolution chain (grammar.rs)
   "^Resolve a grammar.*search dirs.*download",
