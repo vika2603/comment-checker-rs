@@ -204,6 +204,50 @@ fn test_hook_edit_tool_filters_by_range() {
 }
 
 #[test]
+fn test_hook_multi_edit_unions_ranges_and_excludes_gap() {
+    let path = fixture_str("rust.rs");
+    let source = std::fs::read_to_string(fixture("rust.rs")).unwrap();
+    assert!(source.contains("// This is a regular comment"));
+    assert!(source.contains("// TODO: fix this"));
+    assert!(source.contains("Doc block comment"));
+
+    let json = serde_json::json!({
+        "tool_name": "MultiEdit",
+        "tool_input": {
+            "file_path": path,
+            "edits": [
+                {"old_string": "", "new_string": "// This is a regular comment - should be FLAGGED"},
+                {"old_string": "", "new_string": "// TODO: fix this -- should be FLAGGED (not in allowlist)"}
+            ]
+        }
+    })
+    .to_string();
+
+    let output = bin()
+        .write_stdin(json)
+        .assert()
+        .code(2)
+        .stderr(predicate::str::contains("<comment-checker>"))
+        .get_output()
+        .stderr
+        .clone();
+    let stderr = String::from_utf8_lossy(&output);
+
+    assert!(
+        stderr.contains("regular comment"),
+        "first-edit region must be flagged, got: {stderr}"
+    );
+    assert!(
+        stderr.contains("TODO"),
+        "second-edit region must be flagged, got: {stderr}"
+    );
+    assert!(
+        !stderr.contains("Doc block comment"),
+        "line 5 sits in the gap between ranges and must not be flagged, got: {stderr}"
+    );
+}
+
+#[test]
 fn test_init_codex_installs_create_matcher() {
     let tmp = tempfile::tempdir().expect("temp dir must be created");
 
