@@ -160,10 +160,13 @@ fn test_config_allowlist_full_suppression_exits_0() {
 fn test_hook_edit_tool_filters_by_range() {
     let path = fixture_str("rust.rs");
     let source = std::fs::read_to_string(fixture("rust.rs")).unwrap();
-
     assert!(
         source.contains("regular comment"),
         "fixture must contain 'regular comment'"
+    );
+    assert!(
+        source.contains("TODO: fix this"),
+        "fixture must contain a far-away TODO to test range exclusion"
     );
 
     let json = serde_json::json!({
@@ -176,11 +179,28 @@ fn test_hook_edit_tool_filters_by_range() {
     })
     .to_string();
 
-    bin()
+    let output = bin()
         .write_stdin(json)
         .assert()
         .code(2)
-        .stderr(predicate::str::contains("<comment-checker>"));
+        .stderr(predicate::str::contains("<comment-checker>"))
+        .get_output()
+        .stderr
+        .clone();
+    let stderr = String::from_utf8_lossy(&output);
+
+    assert!(
+        stderr.contains("regular comment"),
+        "in-range comment should be flagged, got: {stderr}"
+    );
+    assert!(
+        !stderr.contains("TODO: fix this"),
+        "far-away TODO at line 19 should be filtered out, got: {stderr}"
+    );
+    assert!(
+        !stderr.contains("inline comment"),
+        "far-away inline comment at line 16 should be filtered out, got: {stderr}"
+    );
 }
 
 #[test]
