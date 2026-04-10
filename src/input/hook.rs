@@ -177,6 +177,14 @@ mod tests {
     }
 
     #[test]
+    fn test_find_changed_ranges_repeated_needle() {
+        let sample = "top\nfoo\nmiddle\nmiddle\nmiddle\nfoo\nbottom\n";
+        let ranges = find_changed_ranges(sample, &["foo"]).unwrap();
+        assert_eq!(ranges.len(), 1);
+        assert_eq!(ranges[0], 1..8);
+    }
+
+    #[test]
     fn test_find_changed_ranges_not_found() {
         let result = find_changed_ranges(SAMPLE, &["does not exist"]);
         assert!(result.is_none());
