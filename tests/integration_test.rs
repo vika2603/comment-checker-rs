@@ -248,6 +248,16 @@ fn test_hook_multi_edit_unions_ranges_and_excludes_gap() {
 }
 
 #[test]
+fn test_fetch_parsers_rejects_unknown_name() {
+    bin()
+        .arg("fetch-parsers")
+        .arg("totally-not-a-real-language")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("unknown grammar"));
+}
+
+#[test]
 fn test_init_codex_installs_create_matcher() {
     let tmp = tempfile::tempdir().expect("temp dir must be created");
 

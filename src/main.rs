@@ -153,7 +153,20 @@ fn fetch_parsers(args: &Cli, languages: &[String]) -> std::result::Result<(), St
     let names: Vec<&str> = if languages.is_empty() {
         Language::all_grammar_names().to_vec()
     } else {
-        languages.iter().map(|s| s.as_str()).collect()
+        let known: std::collections::HashSet<&str> =
+            Language::all_grammar_names().iter().copied().collect();
+        let (valid, unknown): (Vec<&str>, Vec<&str>) = languages
+            .iter()
+            .map(|s| s.as_str())
+            .partition(|name| known.contains(name));
+        if !unknown.is_empty() {
+            return Err(format!(
+                "unknown grammar(s): {}; available: {}",
+                unknown.join(", "),
+                Language::all_grammar_names().join(", ")
+            ));
+        }
+        valid
     };
 
     let mut errors = Vec::new();
