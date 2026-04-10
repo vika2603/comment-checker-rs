@@ -203,6 +203,46 @@ impl Language {
         }
     }
 
+    #[cfg(test)]
+    fn all_variants_with_grammar() -> Vec<(Language, &'static str)> {
+        vec![
+            (Language::Rust, "rust"),
+            (Language::Python, "python"),
+            (Language::JavaScript, "javascript"),
+            (Language::Jsx, "javascript"),
+            (Language::TypeScript, "typescript"),
+            (Language::Tsx, "tsx"),
+            (Language::Go, "go"),
+            (Language::Java, "java"),
+            (Language::C, "c"),
+            (Language::Cpp, "cpp"),
+            (Language::Ruby, "ruby"),
+            (Language::Shell, "bash"),
+            (Language::Kotlin, "kotlin"),
+            (Language::Swift, "swift"),
+            (Language::CSharp, "c-sharp"),
+            (Language::Scala, "scala"),
+            (Language::PHP, "php"),
+            (Language::Lua, "lua"),
+            (Language::Elixir, "elixir"),
+            (Language::Haskell, "haskell"),
+            (Language::OCaml, "ocaml"),
+            (Language::Zig, "zig"),
+            (Language::Dart, "dart"),
+            (Language::R, "r"),
+            (Language::Toml, "toml"),
+            (Language::Yaml, "yaml"),
+            (Language::Html, "html"),
+            (Language::Css, "css"),
+            (Language::Sql, "sql"),
+            (Language::Hcl, "hcl"),
+            (Language::Nix, "nix"),
+            (Language::Clojure, "clojure"),
+            (Language::Erlang, "erlang"),
+            (Language::ObjC, "objc"),
+        ]
+    }
+
     /// All distinct grammar names (for fetch-parsers --all).
     pub fn all_grammar_names() -> &'static [&'static str] {
         &[
@@ -240,5 +280,61 @@ impl Language {
             "erlang",
             "objc",
         ]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_from_extension_disambiguates() {
+        assert_eq!(Language::from_extension("h"), Some(Language::C));
+        assert_eq!(Language::from_extension("hpp"), Some(Language::Cpp));
+        assert_eq!(Language::from_extension("m"), Some(Language::ObjC));
+        assert_eq!(Language::from_extension("r"), Some(Language::R));
+        assert_eq!(Language::from_extension("R"), Some(Language::R));
+    }
+
+    #[test]
+    fn test_from_extension_unknown_returns_none() {
+        assert!(Language::from_extension("unknownext").is_none());
+        assert!(Language::from_extension("").is_none());
+    }
+
+    #[test]
+    fn test_from_path_uses_extension() {
+        assert_eq!(
+            Language::from_path(&PathBuf::from("foo/bar.rs")),
+            Some(Language::Rust)
+        );
+        assert_eq!(Language::from_path(&PathBuf::from("Makefile")), None);
+    }
+
+    #[test]
+    fn test_grammar_name_matches_all_grammar_names() {
+        let listed: HashSet<&str> = Language::all_grammar_names().iter().copied().collect();
+        for (lang, expected) in Language::all_variants_with_grammar() {
+            assert_eq!(
+                lang.grammar_name(),
+                expected,
+                "grammar_name() drift for {:?}",
+                lang
+            );
+            assert!(
+                listed.contains(expected),
+                "all_grammar_names() missing {expected} (for {:?})",
+                lang
+            );
+        }
+    }
+
+    #[test]
+    fn test_jsx_shares_javascript_grammar() {
+        assert_eq!(Language::Jsx.grammar_name(), "javascript");
+        assert_eq!(Language::Jsx.so_file_name(), "javascript.so");
+        assert_eq!(Language::Jsx.symbol_name(), b"tree_sitter_javascript");
     }
 }
