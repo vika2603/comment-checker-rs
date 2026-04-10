@@ -20,41 +20,6 @@ pub fn format_text(diagnostics: &[Diagnostic]) -> String {
     out
 }
 
-#[derive(Serialize)]
-struct JsonlRecord<'a> {
-    file: &'a str,
-    line: usize,
-    column: usize,
-    end_line: usize,
-    end_column: usize,
-    kind: &'a str,
-    text: String,
-    severity: &'static str,
-}
-
-/// JSONL format: one JSON object per diagnostic, newline-delimited.
-pub fn format_jsonl(diagnostics: &[Diagnostic]) -> String {
-    let mut out = String::new();
-    for d in diagnostics {
-        let kind_str = d.comment.kind.to_string();
-        let record = JsonlRecord {
-            file: &d.file,
-            line: d.comment.span.start_line,
-            column: d.comment.span.start_col,
-            end_line: d.comment.span.end_line,
-            end_column: d.comment.span.end_col,
-            kind: &kind_str,
-            text: d.comment.raw_text(),
-            severity: "warning",
-        };
-        if let Ok(json) = serde_json::to_string(&record) {
-            out.push_str(&json);
-            out.push('\n');
-        }
-    }
-    out
-}
-
 const DEFAULT_INSTRUCTION: &str = "\
 Do NOT edit the file yet. Collect ALL flagged comments from this report first, \
 then apply all changes in a SINGLE edit operation. \
@@ -214,15 +179,6 @@ mod tests {
         let diags = vec![make_diag("foo.rs", "TODO: fix", 10)];
         let out = format_text(&diags);
         assert!(out.contains("foo.rs:10:0: warning[comment]: // TODO: fix"));
-    }
-
-    #[test]
-    fn test_format_jsonl() {
-        let diags = vec![make_diag("bar.rs", "FIXME", 5)];
-        let out = format_jsonl(&diags);
-        assert!(out.contains("\"file\":\"bar.rs\""));
-        assert!(out.contains("\"line\":5"));
-        assert!(out.contains("\"severity\":\"warning\""));
     }
 
     #[test]
