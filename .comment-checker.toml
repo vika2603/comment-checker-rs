@@ -1,10 +1,10 @@
-# comment-checker's own config -- dogfooding the tool
-#
+# comment-checker's own config -- dogfooding the tool.
 # Patterns matched against stripped comment content (prefix removed).
 
 allowlist = [
   # Allowlist section headers (organizing long pattern lists)
   "^(Linter|Rust|Compiler|Type|Shebang|Encoding|License|BDD|Region)",
+  "^(Patterns|Allowlist|Test|snapshot_test|Accurate|Dynamic|GrammarCache|Grammar|comment-checker)\\b",
 
   # Test explanation comments (line N, buffer, etc.)
   "^\"",
@@ -12,15 +12,11 @@ allowlist = [
   "merged$",
   "^Both ranges",
   "^Write tool",
+  "^Guards against",
 
   # Test assertion intent comments (parser_test.rs)
   "^The fixture has several comments",
   "^String literals inside source code must not be returned",
-
-  # Grammar cache lifetime explanation (parser_test.rs / snapshot_test.rs)
-  "^Leak the cache so the Library",
-  "^Multiple tests run in the same process",
-  "which invalidates the function pointers",
 
   # snapshot_test.rs helper doc comment
   "^Returns None when the parser",
@@ -41,28 +37,18 @@ allowlist = [
   "^The C symbol exported",
   "^The grammar name used in download URLs",
   "^All distinct grammar names",
-
-  # Temporary stub in parser/mod.rs until Task 7
-  "TODO\\(task-7\\)",
-  "cannot be parsed",
+  "Returns None if the source cannot be parsed",
 
   # GrammarCache internals (grammar.rs)
-  "already-cached Language without triggering",
   "raw fn ptr",
   "verified working with libloading",
   "^Validate ABI",
-
-  # Config loading doc comment (config.rs)
-  "^Load config from the first location",
+  "Include PID to avoid concurrent",
+  "Count logical lines",
 
   # Grammar resolution chain (grammar.rs)
   "^Resolve a grammar.*search dirs.*download",
   "^Build the ordered list of directories",
-
-  # Download and integrity verification (grammar.rs)
-  "atomic write.*tmp.*verify.*rename",
-  "^Verify SHA256",
-  "^Atomic write.*tmp.*rename",
 
   # Linter directives in shell scripts
   "^shellcheck",
